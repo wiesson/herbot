@@ -64,7 +64,10 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "mr-2")}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "mr-2"
+              )}
             >
               <ChevronLeft className="h-5 w-5" />
             </Link>
@@ -92,7 +95,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                 }}
               >
                 <SelectTrigger className="w-[200px]">
-                  <GitBranch className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <GitBranch className="size-4 mr-2 text-muted-foreground" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -117,7 +120,9 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
                 <AvatarFallback>{user.name[0]}</AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium hidden sm:inline">{user.name}</span>
+              <span className="text-sm font-medium hidden sm:inline">
+                {user.name}
+              </span>
             </div>
             <Link
               href="/api/auth/logout"
@@ -134,7 +139,9 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
         <KanbanBoard
           workspaceId={workspace._id}
           repositoryId={
-            selectedRepoId === "all" ? undefined : (selectedRepoId as Id<"repositories">)
+            selectedRepoId === "all"
+              ? undefined
+              : (selectedRepoId as Id<"repositories">)
           }
         />
       </main>

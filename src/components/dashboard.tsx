@@ -29,7 +29,9 @@ interface DashboardProps {
 }
 
 export function Dashboard({ user }: DashboardProps) {
-  const workspaces = (user.workspaces ?? []).filter((ws): ws is Workspace => ws !== null);
+  const workspaces = (user.workspaces ?? []).filter(
+    (ws): ws is Workspace => ws !== null
+  );
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
@@ -51,10 +53,17 @@ export function Dashboard({ user }: DashboardProps) {
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
                 <AvatarFallback>{user.name[0]}</AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium hidden sm:inline">{user.name}</span>
+              <span className="text-sm font-medium hidden sm:inline">
+                {user.name}
+              </span>
             </div>
             <form action="/api/auth/logout" method="POST" className="inline">
-              <button type="submit" className={cn(buttonVariants({ variant: "ghost", size: "icon" }))}>
+              <button
+                type="submit"
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "icon" })
+                )}
+              >
                 <LogOut className="h-5 w-5" />
               </button>
             </form>
@@ -65,7 +74,9 @@ export function Dashboard({ user }: DashboardProps) {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-2">Welcome back, {user.name}!</h2>
+          <h2 className="text-2xl font-bold mb-2">
+            Welcome back, {user.name}!
+          </h2>
           <p className="text-muted-foreground">
             Select a workspace or create a new one to get started.
           </p>
@@ -83,7 +94,9 @@ export function Dashboard({ user }: DashboardProps) {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">/{workspace.slug}</p>
+                  <p className="text-sm text-muted-foreground">
+                    /{workspace.slug}
+                  </p>
                 </CardContent>
               </Card>
             </Link>
@@ -108,7 +121,7 @@ export function Dashboard({ user }: DashboardProps) {
                 Create your first workspace to start managing tasks with Norbot.
               </p>
               <Link href="/workspaces/new" className={cn(buttonVariants())}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="size-4" />
                 Create Workspace
               </Link>
             </CardContent>

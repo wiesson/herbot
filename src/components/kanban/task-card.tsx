@@ -79,25 +79,36 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       <CardHeader className="p-3 pb-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            <TypeIcon className={cn("h-4 w-4", taskTypeColors[task.taskType])} />
-            <span className="text-xs font-mono text-muted-foreground">{task.displayId}</span>
+            <TypeIcon className={cn("size-4", taskTypeColors[task.taskType])} />
+            <span className="text-xs font-mono text-muted-foreground">
+              {task.displayId}
+            </span>
           </div>
           <Badge
             variant="outline"
-            className={cn("text-[10px] px-1.5 py-0", priorityColors[task.priority])}
+            className={cn(
+              "text-[10px] px-1.5 py-0",
+              priorityColors[task.priority]
+            )}
           >
             {task.priority}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="p-3 pt-2">
-        <h4 className="text-sm font-medium leading-snug mb-2 line-clamp-2">{task.title}</h4>
+        <h4 className="text-sm font-medium leading-snug mb-2 line-clamp-2">
+          {task.title}
+        </h4>
 
         {/* Labels */}
         {task.labels.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
             {task.labels.slice(0, 3).map((label) => (
-              <Badge key={label} variant="secondary" className="text-[10px] px-1.5 py-0">
+              <Badge
+                key={label}
+                variant="secondary"
+                className="text-[10px] px-1.5 py-0"
+              >
                 {label}
               </Badge>
             ))}
@@ -115,7 +126,8 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             {/* Source indicator */}
             {task.source.type === "slack" && task.source.slackChannelName && (
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                <MessageSquare className="h-3 w-3" />#{task.source.slackChannelName}
+                <MessageSquare className="h-3 w-3" />#
+                {task.source.slackChannelName}
               </span>
             )}
 
@@ -123,9 +135,12 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             {task.claudeCodeExecution && (
               <span
                 className={cn("text-[10px] flex items-center gap-0.5", {
-                  "text-yellow-500": task.claudeCodeExecution.status === "pending",
-                  "text-blue-500": task.claudeCodeExecution.status === "running",
-                  "text-green-500": task.claudeCodeExecution.status === "completed",
+                  "text-yellow-500":
+                    task.claudeCodeExecution.status === "pending",
+                  "text-blue-500":
+                    task.claudeCodeExecution.status === "running",
+                  "text-green-500":
+                    task.claudeCodeExecution.status === "completed",
                   "text-red-500": task.claudeCodeExecution.status === "failed",
                 })}
               >
@@ -138,8 +153,13 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           {/* Assignee */}
           {task.assignee && (
             <Avatar className="h-5 w-5">
-              <AvatarImage src={task.assignee.avatarUrl} alt={task.assignee.name} />
-              <AvatarFallback className="text-[10px]">{task.assignee.name[0]}</AvatarFallback>
+              <AvatarImage
+                src={task.assignee.avatarUrl}
+                alt={task.assignee.name}
+              />
+              <AvatarFallback className="text-[10px]">
+                {task.assignee.name[0]}
+              </AvatarFallback>
             </Avatar>
           )}
         </div>

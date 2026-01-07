@@ -94,7 +94,13 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
     if (!newStatus) return;
     await updateStatus({
       id: taskId,
-      status: newStatus as "backlog" | "todo" | "in_progress" | "in_review" | "done" | "cancelled",
+      status: newStatus as
+        | "backlog"
+        | "todo"
+        | "in_progress"
+        | "in_review"
+        | "done"
+        | "cancelled",
     });
   };
 
@@ -103,9 +109,16 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
-            <TypeIcon className={cn("h-5 w-5", taskTypeColors[task.taskType])} />
-            <span className="font-mono text-sm text-muted-foreground">{task.displayId}</span>
-            <Badge variant="outline" className={cn("ml-auto", priorityColors[task.priority])}>
+            <TypeIcon
+              className={cn("h-5 w-5", taskTypeColors[task.taskType])}
+            />
+            <span className="font-mono text-sm text-muted-foreground">
+              {task.displayId}
+            </span>
+            <Badge
+              variant="outline"
+              className={cn("ml-auto", priorityColors[task.priority])}
+            >
               {task.priority}
             </Badge>
           </div>
@@ -122,7 +135,9 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
         {/* Status & Actions */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Status</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+              Status
+            </label>
             <Select value={task.status} onValueChange={handleStatusChange}>
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -137,9 +152,13 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
             </Select>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Type</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
+              Type
+            </label>
             <div className="flex items-center gap-2 h-9 px-3 border rounded-md bg-muted/50">
-              <TypeIcon className={cn("h-4 w-4", taskTypeColors[task.taskType])} />
+              <TypeIcon
+                className={cn("size-4", taskTypeColors[task.taskType])}
+              />
               <span className="text-sm capitalize">{task.taskType}</span>
             </div>
           </div>
@@ -149,9 +168,11 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
         {task.source.type === "slack" && task.source.slackChannelName && (
           <div className="bg-muted/50 rounded-lg p-3">
             <div className="flex items-center gap-2 text-sm">
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <MessageSquare className="size-4 text-muted-foreground" />
               <span className="text-muted-foreground">From Slack:</span>
-              <span className="font-medium">#{task.source.slackChannelName}</span>
+              <span className="font-medium">
+                #{task.source.slackChannelName}
+              </span>
               {task.source.slackPermalink && (
                 <a
                   href={task.source.slackPermalink}
@@ -175,18 +196,25 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Code Context</h4>
             <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-              {task.codeContext.filePaths && task.codeContext.filePaths.length > 0 && (
-                <div>
-                  <span className="text-xs text-muted-foreground">Files:</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {task.codeContext.filePaths.map((path) => (
-                      <Badge key={path} variant="secondary" className="font-mono text-xs">
-                        {path}
-                      </Badge>
-                    ))}
+              {task.codeContext.filePaths &&
+                task.codeContext.filePaths.length > 0 && (
+                  <div>
+                    <span className="text-xs text-muted-foreground">
+                      Files:
+                    </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {task.codeContext.filePaths.map((path) => (
+                        <Badge
+                          key={path}
+                          variant="secondary"
+                          className="font-mono text-xs"
+                        >
+                          {path}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               {task.codeContext.errorMessage && (
                 <div>
                   <span className="text-xs text-muted-foreground">Error:</span>
@@ -203,17 +231,21 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
         {task.claudeCodeExecution && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium flex items-center gap-2">
-              <GitPullRequest className="h-4 w-4" />
+              <GitPullRequest className="size-4" />
               Claude Code
             </h4>
             <div className="bg-muted/50 rounded-lg p-3">
               <div className="flex items-center justify-between">
                 <Badge
                   className={cn({
-                    "bg-yellow-100 text-yellow-700": task.claudeCodeExecution.status === "pending",
-                    "bg-blue-100 text-blue-700": task.claudeCodeExecution.status === "running",
-                    "bg-green-100 text-green-700": task.claudeCodeExecution.status === "completed",
-                    "bg-red-100 text-red-700": task.claudeCodeExecution.status === "failed",
+                    "bg-yellow-100 text-yellow-700":
+                      task.claudeCodeExecution.status === "pending",
+                    "bg-blue-100 text-blue-700":
+                      task.claudeCodeExecution.status === "running",
+                    "bg-green-100 text-green-700":
+                      task.claudeCodeExecution.status === "completed",
+                    "bg-red-100 text-red-700":
+                      task.claudeCodeExecution.status === "failed",
                   })}
                 >
                   {task.claudeCodeExecution.status}
@@ -223,7 +255,9 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
                     href={task.claudeCodeExecution.pullRequestUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" })
+                    )}
                   >
                     <GitPullRequest className="h-3 w-3 mr-1" />
                     View PR
