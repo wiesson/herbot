@@ -1,13 +1,7 @@
 "use client";
 
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Github } from "lucide-react";
 import Link from "next/link";
@@ -18,15 +12,10 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Fixbot</CardTitle>
-          <CardDescription>
-            AI-powered task management with Claude Code integration
-          </CardDescription>
+          <CardDescription>AI-powered task management with Claude Code integration</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Link
-            href="/api/auth/github"
-            className={cn(buttonVariants({ size: "lg" }), "w-full")}
-          >
+          <Link href="/api/auth/github" className={cn(buttonVariants({ size: "lg" }), "w-full")}>
             <Github className="mr-2 h-5 w-5" />
             Continue with GitHub
           </Link>

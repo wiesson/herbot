@@ -1,9 +1,5 @@
 import { v } from "convex/values";
-import {
-  internalAction,
-  internalMutation,
-  internalQuery,
-} from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { fixbotAgent } from "./agents/taskExtractor";
 
@@ -50,9 +46,7 @@ export const getWorkspaceBySlackTeam = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("workspaces")
-      .withIndex("by_slack_team_id", (q) =>
-        q.eq("slackTeamId", args.slackTeamId)
-      )
+      .withIndex("by_slack_team_id", (q) => q.eq("slackTeamId", args.slackTeamId))
       .first();
   },
 });
@@ -62,9 +56,7 @@ export const getChannelMapping = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("channelMappings")
-      .withIndex("by_slack_channel", (q) =>
-        q.eq("slackChannelId", args.slackChannelId)
-      )
+      .withIndex("by_slack_channel", (q) => q.eq("slackChannelId", args.slackChannelId))
       .first();
   },
 });
@@ -115,9 +107,7 @@ export const createOrUpdateWorkspace = internalMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("workspaces")
-      .withIndex("by_slack_team_id", (q) =>
-        q.eq("slackTeamId", args.slackTeamId)
-      )
+      .withIndex("by_slack_team_id", (q) => q.eq("slackTeamId", args.slackTeamId))
       .first();
 
     const now = Date.now();
@@ -351,10 +341,9 @@ export const handleAppMention = internalAction({
   },
   handler: async (ctx, args) => {
     // Deduplication: Check if we already processed this event
-    const alreadyProcessed = await ctx.runQuery(
-      internal.slack.isEventProcessed,
-      { eventTs: args.ts }
-    );
+    const alreadyProcessed = await ctx.runQuery(internal.slack.isEventProcessed, {
+      eventTs: args.ts,
+    });
     if (alreadyProcessed) {
       console.log("Event already processed, skipping:", args.ts);
       return;
@@ -371,12 +360,9 @@ export const handleAppMention = internalAction({
     }
 
     // Get workspace
-    const workspace = await ctx.runQuery(
-      internal.slack.getWorkspaceBySlackTeam,
-      {
-        slackTeamId: args.teamId,
-      }
-    );
+    const workspace = await ctx.runQuery(internal.slack.getWorkspaceBySlackTeam, {
+      slackTeamId: args.teamId,
+    });
 
     if (!workspace) {
       console.error("No workspace found for Slack team:", args.teamId);
@@ -384,12 +370,9 @@ export const handleAppMention = internalAction({
     }
 
     // Get channel mapping for repository context
-    const channelMapping = await ctx.runQuery(
-      internal.slack.getChannelMapping,
-      {
-        slackChannelId: args.channelId,
-      }
-    );
+    const channelMapping = await ctx.runQuery(internal.slack.getChannelMapping, {
+      slackChannelId: args.channelId,
+    });
 
     // Clean message text (remove bot mention but keep user mentions for assignment)
     const cleanText = args.text
@@ -499,12 +482,14 @@ export const handleThreadReply = internalAction({
  * - Markdown bullets (* or -) → •
  */
 function markdownToSlackMrkdwn(text: string): string {
-  return text
-    // Convert **bold** to *bold* (must be done before handling single *)
-    .replace(/\*\*(.+?)\*\*/g, "*$1*")
-    // Convert markdown bullets at start of line to Slack bullets
-    .replace(/^\*\s+/gm, "• ")
-    .replace(/^-\s+/gm, "• ");
+  return (
+    text
+      // Convert **bold** to *bold* (must be done before handling single *)
+      .replace(/\*\*(.+?)\*\*/g, "*$1*")
+      // Convert markdown bullets at start of line to Slack bullets
+      .replace(/^\*\s+/gm, "• ")
+      .replace(/^-\s+/gm, "• ")
+  );
 }
 
 async function sendSlackMessage(params: {

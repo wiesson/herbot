@@ -18,12 +18,7 @@ export default defineSchema({
     // Settings
     settings: v.object({
       defaultTaskPriority: v.optional(
-        v.union(
-          v.literal("critical"),
-          v.literal("high"),
-          v.literal("medium"),
-          v.literal("low")
-        )
+        v.union(v.literal("critical"), v.literal("high"), v.literal("medium"), v.literal("low"))
       ),
       aiExtractionEnabled: v.boolean(),
     }),
@@ -222,12 +217,7 @@ export default defineSchema({
 
     // Source Tracking
     source: v.object({
-      type: v.union(
-        v.literal("slack"),
-        v.literal("manual"),
-        v.literal("github"),
-        v.literal("api")
-      ),
+      type: v.union(v.literal("slack"), v.literal("manual"), v.literal("github"), v.literal("api")),
       slackChannelId: v.optional(v.string()),
       slackChannelName: v.optional(v.string()),
       slackMessageTs: v.optional(v.string()),
@@ -305,11 +295,7 @@ export default defineSchema({
     authorId: v.optional(v.id("users")),
 
     content: v.string(),
-    contentType: v.union(
-      v.literal("text"),
-      v.literal("markdown"),
-      v.literal("system")
-    ),
+    contentType: v.union(v.literal("text"), v.literal("markdown"), v.literal("system")),
 
     // Slack sync
     slackMessageTs: v.optional(v.string()),

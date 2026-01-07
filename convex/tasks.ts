@@ -59,17 +59,13 @@ export const getKanban = query({
     if (args.repositoryId) {
       tasks = await ctx.db
         .query("tasks")
-        .withIndex("by_repository", (q) =>
-          q.eq("repositoryId", args.repositoryId)
-        )
+        .withIndex("by_repository", (q) => q.eq("repositoryId", args.repositoryId))
         .filter((q) => q.neq(q.field("status"), "cancelled"))
         .collect();
     } else {
       tasks = await ctx.db
         .query("tasks")
-        .withIndex("by_workspace", (q) =>
-          q.eq("workspaceId", args.workspaceId)
-        )
+        .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
         .filter((q) => q.neq(q.field("status"), "cancelled"))
         .collect();
     }
@@ -109,10 +105,7 @@ export const getForClaudeCode = query({
       .withIndex("by_repository", (q) => q.eq("repositoryId", args.repositoryId))
       .filter((q) =>
         q.and(
-          q.or(
-            q.eq(q.field("status"), "todo"),
-            q.eq(q.field("status"), "in_progress")
-          ),
+          q.or(q.eq(q.field("status"), "todo"), q.eq(q.field("status"), "in_progress")),
           q.neq(q.field("codeContext"), undefined)
         )
       )
@@ -120,9 +113,7 @@ export const getForClaudeCode = query({
 
     // Filter out already processed tasks
     return tasks.filter(
-      (t) =>
-        !t.claudeCodeExecution ||
-        t.claudeCodeExecution.status === "pending"
+      (t) => !t.claudeCodeExecution || t.claudeCodeExecution.status === "pending"
     );
   },
 });
@@ -151,12 +142,7 @@ export const create = mutation({
       v.literal("question")
     ),
     source: v.object({
-      type: v.union(
-        v.literal("slack"),
-        v.literal("manual"),
-        v.literal("github"),
-        v.literal("api")
-      ),
+      type: v.union(v.literal("slack"), v.literal("manual"), v.literal("github"), v.literal("api")),
       slackChannelId: v.optional(v.string()),
       slackChannelName: v.optional(v.string()),
       slackMessageTs: v.optional(v.string()),
@@ -316,8 +302,7 @@ export const updateClaudeCodeExecution = mutation({
         ...task.claudeCodeExecution,
         ...args.execution,
         ...(args.execution.status === "running" ? { startedAt: now } : {}),
-        ...(args.execution.status === "completed" ||
-        args.execution.status === "failed"
+        ...(args.execution.status === "completed" || args.execution.status === "failed"
           ? { completedAt: now }
           : {}),
       },
@@ -328,9 +313,7 @@ export const updateClaudeCodeExecution = mutation({
     await ctx.db.insert("taskActivity", {
       taskId: args.taskId,
       activityType:
-        args.execution.status === "completed"
-          ? "claude_code_completed"
-          : "claude_code_started",
+        args.execution.status === "completed" ? "claude_code_completed" : "claude_code_started",
       metadata: args.execution,
       createdAt: now,
     });

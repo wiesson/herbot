@@ -104,13 +104,8 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
             <TypeIcon className={cn("h-5 w-5", taskTypeColors[task.taskType])} />
-            <span className="font-mono text-sm text-muted-foreground">
-              {task.displayId}
-            </span>
-            <Badge
-              variant="outline"
-              className={cn("ml-auto", priorityColors[task.priority])}
-            >
+            <span className="font-mono text-sm text-muted-foreground">{task.displayId}</span>
+            <Badge variant="outline" className={cn("ml-auto", priorityColors[task.priority])}>
               {task.priority}
             </Badge>
           </div>
@@ -127,9 +122,7 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
         {/* Status & Actions */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
-              Status
-            </label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Status</label>
             <Select value={task.status} onValueChange={handleStatusChange}>
               <SelectTrigger className="w-full">
                 <SelectValue />
@@ -144,9 +137,7 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
             </Select>
           </div>
           <div>
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
-              Type
-            </label>
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Type</label>
             <div className="flex items-center gap-2 h-9 px-3 border rounded-md bg-muted/50">
               <TypeIcon className={cn("h-4 w-4", taskTypeColors[task.taskType])} />
               <span className="text-sm capitalize">{task.taskType}</span>

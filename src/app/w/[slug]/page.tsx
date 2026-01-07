@@ -18,13 +18,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import {
-  Settings,
-  LogOut,
-  ChevronLeft,
-  GitBranch,
-  Slack,
-} from "lucide-react";
+import { Settings, LogOut, ChevronLeft, GitBranch, Slack } from "lucide-react";
 import Link from "next/link";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -70,10 +64,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
           <div className="flex items-center gap-4">
             <Link
               href="/"
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "icon" }),
-                "mr-2"
-              )}
+              className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "mr-2")}
             >
               <ChevronLeft className="h-5 w-5" />
             </Link>
@@ -126,9 +117,7 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
                 <AvatarFallback>{user.name[0]}</AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium hidden sm:inline">
-                {user.name}
-              </span>
+              <span className="text-sm font-medium hidden sm:inline">{user.name}</span>
             </div>
             <Link
               href="/api/auth/logout"
@@ -144,7 +133,9 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
       <main className="container mx-auto px-4 py-6">
         <KanbanBoard
           workspaceId={workspace._id}
-          repositoryId={selectedRepoId === "all" ? undefined : selectedRepoId as Id<"repositories">}
+          repositoryId={
+            selectedRepoId === "all" ? undefined : (selectedRepoId as Id<"repositories">)
+          }
         />
       </main>
     </div>

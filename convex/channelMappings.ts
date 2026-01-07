@@ -19,14 +19,10 @@ export const list = query({
     // Enrich with repository info
     const enriched = await Promise.all(
       mappings.map(async (mapping) => {
-        const repo = mapping.repositoryId
-          ? await ctx.db.get(mapping.repositoryId)
-          : null;
+        const repo = mapping.repositoryId ? await ctx.db.get(mapping.repositoryId) : null;
         return {
           ...mapping,
-          repository: repo
-            ? { name: repo.name, fullName: repo.fullName }
-            : null,
+          repository: repo ? { name: repo.name, fullName: repo.fullName } : null,
         };
       })
     );
@@ -40,9 +36,7 @@ export const getByChannel = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("channelMappings")
-      .withIndex("by_slack_channel", (q) =>
-        q.eq("slackChannelId", args.slackChannelId)
-      )
+      .withIndex("by_slack_channel", (q) => q.eq("slackChannelId", args.slackChannelId))
       .first();
   },
 });
@@ -69,9 +63,7 @@ export const create = mutation({
     // Check if mapping already exists
     const existing = await ctx.db
       .query("channelMappings")
-      .withIndex("by_slack_channel", (q) =>
-        q.eq("slackChannelId", args.slackChannelId)
-      )
+      .withIndex("by_slack_channel", (q) => q.eq("slackChannelId", args.slackChannelId))
       .first();
 
     if (existing) {
@@ -113,9 +105,7 @@ export const update = mutation({
     if (!mapping) throw new Error("Channel mapping not found");
 
     await ctx.db.patch(args.id, {
-      ...(args.repositoryId !== undefined
-        ? { repositoryId: args.repositoryId }
-        : {}),
+      ...(args.repositoryId !== undefined ? { repositoryId: args.repositoryId } : {}),
       ...(args.settings ? { settings: args.settings } : {}),
       updatedAt: Date.now(),
     });
@@ -153,9 +143,7 @@ export const syncChannels = mutation({
     for (const channel of args.channels) {
       const existing = await ctx.db
         .query("channelMappings")
-        .withIndex("by_slack_channel", (q) =>
-          q.eq("slackChannelId", channel.id)
-        )
+        .withIndex("by_slack_channel", (q) => q.eq("slackChannelId", channel.id))
         .first();
 
       if (existing) {

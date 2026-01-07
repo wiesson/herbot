@@ -25,9 +25,7 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
 
   if (error) {
-    return NextResponse.redirect(
-      new URL(`/login?error=${error}`, request.url)
-    );
+    return NextResponse.redirect(new URL(`/login?error=${error}`, request.url));
   }
 
   if (!code) {
@@ -36,29 +34,24 @@ export async function GET(request: NextRequest) {
 
   try {
     // Exchange code for access token
-    const tokenResponse = await fetch(
-      "https://github.com/login/oauth/access_token",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          client_id: process.env.GITHUB_CLIENT_ID,
-          client_secret: process.env.GITHUB_CLIENT_SECRET,
-          code,
-        }),
-      }
-    );
+    const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+      }),
+    });
 
     const tokenData = await tokenResponse.json();
 
     if (tokenData.error) {
       console.error("GitHub OAuth error:", tokenData);
-      return NextResponse.redirect(
-        new URL(`/login?error=${tokenData.error}`, request.url)
-      );
+      return NextResponse.redirect(new URL(`/login?error=${tokenData.error}`, request.url));
     }
 
     const accessToken = tokenData.access_token;
@@ -76,24 +69,19 @@ export async function GET(request: NextRequest) {
     // Get user email if not public
     let email = githubUser.email;
     if (!email) {
-      const emailsResponse = await fetch(
-        "https://api.github.com/user/emails",
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: "application/vnd.github.v3+json",
-          },
-        }
-      );
+      const emailsResponse = await fetch("https://api.github.com/user/emails", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      });
       const emails: GitHubEmail[] = await emailsResponse.json();
       const primaryEmail = emails.find((e) => e.primary && e.verified);
       email = primaryEmail?.email ?? emails[0]?.email;
     }
 
     if (!email) {
-      return NextResponse.redirect(
-        new URL("/login?error=no_email", request.url)
-      );
+      return NextResponse.redirect(new URL("/login?error=no_email", request.url));
     }
 
     // Upsert user in Convex
@@ -120,8 +108,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   } catch (error) {
     console.error("GitHub OAuth callback error:", error);
-    return NextResponse.redirect(
-      new URL("/login?error=callback_failed", request.url)
-    );
+    return NextResponse.redirect(new URL("/login?error=callback_failed", request.url));
   }
 }

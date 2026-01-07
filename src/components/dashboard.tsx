@@ -29,9 +29,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ user }: DashboardProps) {
-  const workspaces = (user.workspaces ?? []).filter(
-    (ws): ws is Workspace => ws !== null
-  );
+  const workspaces = (user.workspaces ?? []).filter((ws): ws is Workspace => ws !== null);
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
@@ -53,9 +51,7 @@ export function Dashboard({ user }: DashboardProps) {
                 <AvatarImage src={user.avatarUrl} alt={user.name} />
                 <AvatarFallback>{user.name[0]}</AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium hidden sm:inline">
-                {user.name}
-              </span>
+              <span className="text-sm font-medium hidden sm:inline">{user.name}</span>
             </div>
             <Link
               href="/api/auth/logout"

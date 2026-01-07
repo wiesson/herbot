@@ -37,9 +37,7 @@ export const extractTask = internalAction({
       const { threadId } = await taskExtractorAgent.createThread(ctx, {});
 
       // Add channel context to prompt if available
-      const channelInfo = args.channelContext
-        ? `\nChannel: #${args.channelContext}`
-        : "";
+      const channelInfo = args.channelContext ? `\nChannel: #${args.channelContext}` : "";
 
       // Build the prompt
       const promptText = `Extract task information from this Slack message and respond with ONLY a JSON object (no markdown, no explanation):
@@ -58,11 +56,9 @@ Required JSON format:
 
       // Use generateText with the new API
       // Note: Type assertion needed due to AI SDK 5 vs 6 type mismatch
-      const result = await taskExtractorAgent.generateText(
-        ctx,
-        { threadId },
-        { messages: [{ role: "user" as const, content: promptText }] } as Parameters<typeof taskExtractorAgent.generateText>[2]
-      );
+      const result = await taskExtractorAgent.generateText(ctx, { threadId }, {
+        messages: [{ role: "user" as const, content: promptText }],
+      } as Parameters<typeof taskExtractorAgent.generateText>[2]);
 
       // Parse the JSON response
       const jsonMatch = result.text.match(/\{[\s\S]*\}/);
@@ -104,10 +100,7 @@ function fallbackExtraction(text: string): TaskExtraction {
     lowerText.includes("production down")
   ) {
     priority = "critical";
-  } else if (
-    lowerText.includes("important") ||
-    lowerText.includes("blocking")
-  ) {
+  } else if (lowerText.includes("important") || lowerText.includes("blocking")) {
     priority = "high";
   } else if (lowerText.includes("minor") || lowerText.includes("nice to have")) {
     priority = "low";
@@ -136,11 +129,7 @@ function fallbackExtraction(text: string): TaskExtraction {
     lowerText.includes("update")
   ) {
     taskType = "improvement";
-  } else if (
-    lowerText.includes("?") ||
-    lowerText.includes("how") ||
-    lowerText.includes("why")
-  ) {
+  } else if (lowerText.includes("?") || lowerText.includes("how") || lowerText.includes("why")) {
     taskType = "question";
   }
 
@@ -179,9 +168,7 @@ function fallbackExtraction(text: string): TaskExtraction {
 // VALIDATORS
 // ===========================================
 
-function validatePriority(
-  value: unknown
-): "critical" | "high" | "medium" | "low" {
+function validatePriority(value: unknown): "critical" | "high" | "medium" | "low" {
   const valid = ["critical", "high", "medium", "low"];
   if (typeof value === "string" && valid.includes(value)) {
     return value as "critical" | "high" | "medium" | "low";
@@ -189,9 +176,7 @@ function validatePriority(
   return "medium";
 }
 
-function validateTaskType(
-  value: unknown
-): "bug" | "feature" | "improvement" | "task" | "question" {
+function validateTaskType(value: unknown): "bug" | "feature" | "improvement" | "task" | "question" {
   const valid = ["bug", "feature", "improvement", "task", "question"];
   if (typeof value === "string" && valid.includes(value)) {
     return value as "bug" | "feature" | "improvement" | "task" | "question";

@@ -35,9 +35,7 @@ export function KanbanBoard({ workspaceId, repositoryId }: KanbanBoardProps) {
   if (!kanbanData) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">
-          Loading tasks...
-        </div>
+        <div className="animate-pulse text-muted-foreground">Loading tasks...</div>
       </div>
     );
   }
@@ -68,27 +66,14 @@ export function KanbanBoard({ workspaceId, repositoryId }: KanbanBoardProps) {
       {/* Stats Bar */}
       <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
         <span>Total: {kanbanData.stats.total}</span>
-        <span className="text-red-500">
-          Critical: {kanbanData.stats.byPriority.critical}
-        </span>
-        <span className="text-orange-500">
-          High: {kanbanData.stats.byPriority.high}
-        </span>
-        <span className="text-yellow-500">
-          Medium: {kanbanData.stats.byPriority.medium}
-        </span>
-        <span className="text-slate-500">
-          Low: {kanbanData.stats.byPriority.low}
-        </span>
+        <span className="text-red-500">Critical: {kanbanData.stats.byPriority.critical}</span>
+        <span className="text-orange-500">High: {kanbanData.stats.byPriority.high}</span>
+        <span className="text-yellow-500">Medium: {kanbanData.stats.byPriority.medium}</span>
+        <span className="text-slate-500">Low: {kanbanData.stats.byPriority.low}</span>
       </div>
 
       {/* Task Detail Modal */}
-      {selectedTaskId && (
-        <TaskDetailModal
-          taskId={selectedTaskId}
-          onClose={handleCloseModal}
-        />
-      )}
+      {selectedTaskId && <TaskDetailModal taskId={selectedTaskId} onClose={handleCloseModal} />}
     </>
   );
 }

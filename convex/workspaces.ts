@@ -47,9 +47,7 @@ export const getForUser = query({
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
 
-    const workspaces = await Promise.all(
-      memberships.map((m) => ctx.db.get(m.workspaceId))
-    );
+    const workspaces = await Promise.all(memberships.map((m) => ctx.db.get(m.workspaceId)));
 
     return workspaces.filter(Boolean).map((ws, i) => ({
       ...ws,
@@ -118,12 +116,7 @@ export const update = mutation({
     settings: v.optional(
       v.object({
         defaultTaskPriority: v.optional(
-          v.union(
-            v.literal("critical"),
-            v.literal("high"),
-            v.literal("medium"),
-            v.literal("low")
-          )
+          v.union(v.literal("critical"), v.literal("high"), v.literal("medium"), v.literal("low"))
         ),
         aiExtractionEnabled: v.boolean(),
       })

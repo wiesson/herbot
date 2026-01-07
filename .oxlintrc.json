@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "nextjs", "jsx-a11y", "unicorn"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "rules": {
+    "no-console": "warn",
+    "typescript/no-explicit-any": "warn"
+  },
+  "ignorePatterns": [
+    ".next/**",
+    "node_modules/**",
+    "convex/_generated/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts"
+  ]
+}

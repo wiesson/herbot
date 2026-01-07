@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "3.0.7",
@@ -32,8 +36,9 @@
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^9.39.2",
-    "eslint-config-next": "16.1.1",
+    "@typescript/native-preview": "7.0.0-dev.20260107.1",
+    "oxfmt": "^0.23.0",
+    "oxlint": "^1.38.0",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3"
   }

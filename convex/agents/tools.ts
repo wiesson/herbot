@@ -81,16 +81,13 @@ export const summarizeTasksTool = createTool({
     "Get a summary of active tasks for a Slack channel. Returns task counts grouped by status and priority. Use this when the user asks for a summary, status, or overview of tasks.",
   args: z.object({
     workspaceId: z.string().describe("The workspace ID"),
-    slackChannelId: z
-      .string()
-      .describe("The Slack channel ID to get tasks for"),
+    slackChannelId: z.string().describe("The Slack channel ID to get tasks for"),
   }),
   handler: async (ctx, args): Promise<TaskSummaryResult> => {
     // Get channel mapping to find repository
-    const channelMapping = await ctx.runQuery(
-      internal.tools.getChannelMappingById,
-      { slackChannelId: args.slackChannelId }
-    );
+    const channelMapping = await ctx.runQuery(internal.tools.getChannelMappingById, {
+      slackChannelId: args.slackChannelId,
+    });
 
     // Query tasks for this workspace/repository
     const summary = await ctx.runQuery(internal.tools.getTasksForSummary, {
@@ -112,26 +109,16 @@ export const updateTaskStatusTool = createTool({
   args: z.object({
     displayId: z.string().describe("The task display ID (e.g., FIX-123, TSK-45)"),
     newStatus: z
-      .enum([
-        "backlog",
-        "todo",
-        "in_progress",
-        "in_review",
-        "done",
-        "cancelled",
-      ])
+      .enum(["backlog", "todo", "in_progress", "in_review", "done", "cancelled"])
       .describe("The new status for the task"),
     slackUserId: z.string().describe("The Slack user ID making the change"),
   }),
   handler: async (ctx, args): Promise<StatusUpdateResult> => {
-    const result = await ctx.runMutation(
-      internal.tools.updateTaskStatusByDisplayId,
-      {
-        displayId: args.displayId.toUpperCase(),
-        newStatus: args.newStatus,
-        slackUserId: args.slackUserId,
-      }
-    );
+    const result = await ctx.runMutation(internal.tools.updateTaskStatusByDisplayId, {
+      displayId: args.displayId.toUpperCase(),
+      newStatus: args.newStatus,
+      slackUserId: args.slackUserId,
+    });
     return result;
   },
 });
@@ -147,22 +134,15 @@ export const assignTaskTool = createTool({
     displayId: z.string().describe("The task display ID (e.g., FIX-123, TSK-45)"),
     assigneeSlackId: z
       .string()
-      .describe(
-        "The Slack user ID to assign the task to (e.g., U12345ABC, without the <@ and >)"
-      ),
-    actorSlackUserId: z
-      .string()
-      .describe("The Slack user ID of the person making the assignment"),
+      .describe("The Slack user ID to assign the task to (e.g., U12345ABC, without the <@ and >)"),
+    actorSlackUserId: z.string().describe("The Slack user ID of the person making the assignment"),
   }),
   handler: async (ctx, args): Promise<AssignmentResult> => {
-    const result = await ctx.runMutation(
-      internal.tools.assignTaskByDisplayId,
-      {
-        displayId: args.displayId.toUpperCase(),
-        assigneeSlackId: args.assigneeSlackId,
-        actorSlackUserId: args.actorSlackUserId,
-      }
-    );
+    const result = await ctx.runMutation(internal.tools.assignTaskByDisplayId, {
+      displayId: args.displayId.toUpperCase(),
+      assigneeSlackId: args.assigneeSlackId,
+      actorSlackUserId: args.actorSlackUserId,
+    });
     return result;
   },
 });
@@ -175,22 +155,22 @@ export const createTaskTool = createTool({
   description:
     "Create a new task from a bug report or feature request. ONLY use this when the user describes actual work to be done - a bug, feature request, or task. Do NOT use for greetings, questions about capabilities, or general conversation. If a project was detected or specified, include the projectId.",
   args: z.object({
-    title: z
-      .string()
-      .describe("A clear, actionable task title (start with a verb, max 80 chars)"),
-    description: z
-      .string()
-      .describe("Fuller description of the task with context"),
+    title: z.string().describe("A clear, actionable task title (start with a verb, max 80 chars)"),
+    description: z.string().describe("Fuller description of the task with context"),
     priority: z
       .enum(["critical", "high", "medium", "low"])
-      .describe("Task priority: critical (production down), high (urgent), medium (normal), low (nice to have)"),
+      .describe(
+        "Task priority: critical (production down), high (urgent), medium (normal), low (nice to have)"
+      ),
     taskType: z
       .enum(["bug", "feature", "improvement", "task", "question"])
       .describe("Type of task: bug, feature, improvement, task, or question"),
     projectId: z
       .string()
       .optional()
-      .describe("Optional project ID for project-specific task numbering (e.g., TM-1 instead of FIX-1)"),
+      .describe(
+        "Optional project ID for project-specific task numbering (e.g., TM-1 instead of FIX-1)"
+      ),
     workspaceId: z.string().describe("The workspace ID"),
     slackChannelId: z.string().describe("The Slack channel ID"),
     slackUserId: z.string().describe("The Slack user ID who reported this"),
@@ -226,7 +206,9 @@ export const createProjectTool = createTool({
   args: z.object({
     shortCode: z
       .string()
-      .describe("2-5 character uppercase code for the project (e.g., 'TM', 'ACME'). Used in task IDs."),
+      .describe(
+        "2-5 character uppercase code for the project (e.g., 'TM', 'ACME'). Used in task IDs."
+      ),
     name: z.string().describe("Full name of the project (e.g., 'TakeMemories')"),
     domain: z
       .string()

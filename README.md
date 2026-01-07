@@ -32,6 +32,7 @@ pnpm convex dev
 ```
 
 This will:
+
 - Create a new Convex project (or connect to existing)
 - Generate `convex/_generated/` files
 - Give you your deployment URL (e.g., `https://helpful-horse-123.convex.site`)
@@ -48,14 +49,15 @@ This will:
 
 In the [Convex Dashboard](https://dashboard.convex.dev), add these environment variables:
 
-| Variable | Where to find it |
-|----------|-----------------|
-| `SLACK_CLIENT_ID` | Slack App → Basic Information → App Credentials |
-| `SLACK_CLIENT_SECRET` | Slack App → Basic Information → App Credentials |
-| `SLACK_SIGNING_SECRET` | Slack App → Basic Information → App Credentials |
-| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/) |
+| Variable               | Where to find it                                        |
+| ---------------------- | ------------------------------------------------------- |
+| `SLACK_CLIENT_ID`      | Slack App → Basic Information → App Credentials         |
+| `SLACK_CLIENT_SECRET`  | Slack App → Basic Information → App Credentials         |
+| `SLACK_SIGNING_SECRET` | Slack App → Basic Information → App Credentials         |
+| `ANTHROPIC_API_KEY`    | [console.anthropic.com](https://console.anthropic.com/) |
 
 Also add to `.env.local`:
+
 ```env
 NEXT_PUBLIC_CONVEX_URL=https://YOUR_DEPLOYMENT.convex.cloud
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -81,6 +83,7 @@ Open [http://localhost:3000](http://localhost:3000)
 4. **Create tasks**: `@Fixbot The login button is broken on mobile`
 
 Fixbot will:
+
 - Extract task details using AI
 - Create a task in your Kanban board
 - Reply in Slack with the task ID and link

@@ -105,9 +105,7 @@ export const getChannelMappingById = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("channelMappings")
-      .withIndex("by_slack_channel", (q) =>
-        q.eq("slackChannelId", args.slackChannelId)
-      )
+      .withIndex("by_slack_channel", (q) => q.eq("slackChannelId", args.slackChannelId))
       .first();
   },
 });
@@ -195,9 +193,7 @@ export const assignTaskByDisplayId = internalMutation({
 
     const assignee = await ctx.db
       .query("users")
-      .withIndex("by_slack_user_id", (q) =>
-        q.eq("slackUserId", args.assigneeSlackId)
-      )
+      .withIndex("by_slack_user_id", (q) => q.eq("slackUserId", args.assigneeSlackId))
       .first();
 
     if (!assignee) {
@@ -209,9 +205,7 @@ export const assignTaskByDisplayId = internalMutation({
 
     const actor = await ctx.db
       .query("users")
-      .withIndex("by_slack_user_id", (q) =>
-        q.eq("slackUserId", args.actorSlackUserId)
-      )
+      .withIndex("by_slack_user_id", (q) => q.eq("slackUserId", args.actorSlackUserId))
       .first();
 
     const now = Date.now();
@@ -283,9 +277,7 @@ export const createTask = internalMutation({
     // Get channel mapping for repository
     const channelMapping = await ctx.db
       .query("channelMappings")
-      .withIndex("by_slack_channel", (q) =>
-        q.eq("slackChannelId", args.slackChannelId)
-      )
+      .withIndex("by_slack_channel", (q) => q.eq("slackChannelId", args.slackChannelId))
       .first();
 
     // Determine display ID prefix and counter
@@ -492,25 +484,37 @@ export const findProjectByMatch = internalQuery({
       const code = (codeMatch[1] || codeMatch[2]).toUpperCase();
       const project = projects.find((p) => p.shortCode === code);
       if (project) {
-        return { project: { id: project._id, shortCode: project.shortCode, name: project.name }, matchType: "shortCode" };
+        return {
+          project: { id: project._id, shortCode: project.shortCode, name: project.name },
+          matchType: "shortCode",
+        };
       }
     }
 
     // 2. Domain match
     for (const project of projects) {
       if (project.domain && searchLower.includes(project.domain.toLowerCase())) {
-        return { project: { id: project._id, shortCode: project.shortCode, name: project.name }, matchType: "domain" };
+        return {
+          project: { id: project._id, shortCode: project.shortCode, name: project.name },
+          matchType: "domain",
+        };
       }
     }
 
     // 3. Name match (case-insensitive)
     for (const project of projects) {
       if (searchLower.includes(project.name.toLowerCase())) {
-        return { project: { id: project._id, shortCode: project.shortCode, name: project.name }, matchType: "name" };
+        return {
+          project: { id: project._id, shortCode: project.shortCode, name: project.name },
+          matchType: "name",
+        };
       }
     }
 
     // No match found
-    return { project: null, availableProjects: projects.map((p) => ({ shortCode: p.shortCode, name: p.name })) };
+    return {
+      project: null,
+      availableProjects: projects.map((p) => ({ shortCode: p.shortCode, name: p.name })),
+    };
   },
 });

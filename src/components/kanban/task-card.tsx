@@ -80,9 +80,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <TypeIcon className={cn("h-4 w-4", taskTypeColors[task.taskType])} />
-            <span className="text-xs font-mono text-muted-foreground">
-              {task.displayId}
-            </span>
+            <span className="text-xs font-mono text-muted-foreground">{task.displayId}</span>
           </div>
           <Badge
             variant="outline"
@@ -93,19 +91,13 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         </div>
       </CardHeader>
       <CardContent className="p-3 pt-2">
-        <h4 className="text-sm font-medium leading-snug mb-2 line-clamp-2">
-          {task.title}
-        </h4>
+        <h4 className="text-sm font-medium leading-snug mb-2 line-clamp-2">{task.title}</h4>
 
         {/* Labels */}
         {task.labels.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
             {task.labels.slice(0, 3).map((label) => (
-              <Badge
-                key={label}
-                variant="secondary"
-                className="text-[10px] px-1.5 py-0"
-              >
+              <Badge key={label} variant="secondary" className="text-[10px] px-1.5 py-0">
                 {label}
               </Badge>
             ))}
@@ -123,8 +115,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             {/* Source indicator */}
             {task.source.type === "slack" && task.source.slackChannelName && (
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                <MessageSquare className="h-3 w-3" />
-                #{task.source.slackChannelName}
+                <MessageSquare className="h-3 w-3" />#{task.source.slackChannelName}
               </span>
             )}
 
@@ -148,9 +139,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           {task.assignee && (
             <Avatar className="h-5 w-5">
               <AvatarImage src={task.assignee.avatarUrl} alt={task.assignee.name} />
-              <AvatarFallback className="text-[10px]">
-                {task.assignee.name[0]}
-              </AvatarFallback>
+              <AvatarFallback className="text-[10px]">{task.assignee.name[0]}</AvatarFallback>
             </Avatar>
           )}
         </div>
