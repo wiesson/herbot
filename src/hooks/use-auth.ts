@@ -21,11 +21,15 @@ export function useAuth() {
       });
   }, []);
 
-  const user = useQuery(api.users.me, { sessionToken: sessionToken ?? undefined });
+  // Skip query until we have a token to avoid race condition
+  const user = useQuery(api.users.me, sessionToken ? { sessionToken } : "skip");
+
+  // Still loading if: fetching token OR (have token but query pending)
+  const queryLoading = sessionToken !== null && user === undefined;
 
   return {
     user: user ?? null,
-    isLoading: isLoading || user === undefined,
+    isLoading: isLoading || queryLoading,
     isAuthenticated: !!user,
   };
 }
