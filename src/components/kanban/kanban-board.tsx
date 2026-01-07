@@ -50,7 +50,7 @@ export function KanbanBoard({ workspaceId, repositoryId }: KanbanBoardProps) {
 
   return (
     <>
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-4 scroll-px-4 sm:scroll-px-6 lg:scroll-px-8">
         {columns.map((column) => (
           <KanbanColumn
             key={column.key}

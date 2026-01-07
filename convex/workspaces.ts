@@ -56,6 +56,51 @@ export const getForUser = query({
   },
 });
 
+export const getMembers = query({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const memberships = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .collect();
+
+    const members = await Promise.all(
+      memberships.map(async (m) => {
+        const user = await ctx.db.get(m.userId);
+        return user
+          ? {
+              membershipId: m._id,
+              userId: m.userId,
+              role: m.role,
+              joinedAt: m.joinedAt,
+              name: user.name,
+              email: user.email,
+              avatarUrl: user.avatarUrl,
+              githubUsername: user.githubUsername,
+            }
+          : null;
+      })
+    );
+
+    return members.filter(Boolean);
+  },
+});
+
+export const getUserMembership = query({
+  args: {
+    workspaceId: v.id("workspaces"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_workspace_and_user", (q) =>
+        q.eq("workspaceId", args.workspaceId).eq("userId", args.userId)
+      )
+      .first();
+  },
+});
+
 // ===========================================
 // MUTATIONS
 // ===========================================
@@ -180,6 +225,88 @@ export const removeMember = mutation({
     if (membership) {
       await ctx.db.delete(membership._id);
     }
+  },
+});
+
+export const updateMemberRole = mutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    userId: v.id("users"),
+    role: v.union(v.literal("admin"), v.literal("member"), v.literal("viewer")),
+  },
+  handler: async (ctx, args) => {
+    const membership = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_workspace_and_user", (q) =>
+        q.eq("workspaceId", args.workspaceId).eq("userId", args.userId)
+      )
+      .first();
+
+    if (!membership) {
+      throw new Error("Membership not found");
+    }
+
+    await ctx.db.patch(membership._id, { role: args.role });
+  },
+});
+
+export const deleteWorkspace = mutation({
+  args: { id: v.id("workspaces") },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.db.get(args.id);
+    if (!workspace) {
+      throw new Error("Workspace not found");
+    }
+
+    // Delete all workspace members
+    const members = await ctx.db
+      .query("workspaceMembers")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.id))
+      .collect();
+    for (const member of members) {
+      await ctx.db.delete(member._id);
+    }
+
+    // Delete all tasks
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.id))
+      .collect();
+    for (const task of tasks) {
+      await ctx.db.delete(task._id);
+    }
+
+    // Delete all repositories
+    const repos = await ctx.db
+      .query("repositories")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.id))
+      .collect();
+    for (const repo of repos) {
+      await ctx.db.delete(repo._id);
+    }
+
+    // Delete all channel mappings
+    const channels = await ctx.db
+      .query("channelMappings")
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.id))
+      .collect();
+    for (const channel of channels) {
+      await ctx.db.delete(channel._id);
+    }
+
+    // Delete workspace counter
+    const counter = await ctx.db
+      .query("workspaceCounters")
+      .withIndex("by_workspace_and_type", (q) =>
+        q.eq("workspaceId", args.id).eq("counterType", "task_number")
+      )
+      .first();
+    if (counter) {
+      await ctx.db.delete(counter._id);
+    }
+
+    // Finally delete the workspace
+    await ctx.db.delete(args.id);
   },
 });
 
