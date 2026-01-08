@@ -100,12 +100,15 @@ export const getTasksForSummary = internalQuery({
 
 export const getChannelMappingById = internalQuery({
   args: {
+    workspaceId: v.id("workspaces"),
     slackChannelId: v.string(),
   },
   handler: async (ctx, args) => {
+    // Query by workspace first for proper multi-tenant isolation
     return await ctx.db
       .query("channelMappings")
-      .withIndex("by_slack_channel", (q) => q.eq("slackChannelId", args.slackChannelId))
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .filter((q) => q.eq(q.field("slackChannelId"), args.slackChannelId))
       .first();
   },
 });

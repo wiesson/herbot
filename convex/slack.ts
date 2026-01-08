@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { action, internalAction, internalMutation, internalQuery, query } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 import { norbotAgent } from "./agents/taskExtractor";
 
 // ===========================================
@@ -52,11 +52,16 @@ export const getWorkspaceBySlackTeam = internalQuery({
 });
 
 export const getChannelMapping = internalQuery({
-  args: { slackChannelId: v.string() },
+  args: {
+    workspaceId: v.id("workspaces"),
+    slackChannelId: v.string(),
+  },
   handler: async (ctx, args) => {
+    // Query by workspace first, then filter by channel for proper multi-tenant isolation
     return await ctx.db
       .query("channelMappings")
-      .withIndex("by_slack_channel", (q) => q.eq("slackChannelId", args.slackChannelId))
+      .withIndex("by_workspace", (q) => q.eq("workspaceId", args.workspaceId))
+      .filter((q) => q.eq(q.field("slackChannelId"), args.slackChannelId))
       .first();
   },
 });
@@ -115,6 +120,7 @@ export const createOrUpdateWorkspace = internalMutation({
     if (existing) {
       await ctx.db.patch(existing._id, {
         slackTeamName: args.slackTeamName,
+        slackBotToken: args.slackBotToken,
         slackBotUserId: args.slackBotUserId,
         updatedAt: now,
       });
@@ -132,6 +138,7 @@ export const createOrUpdateWorkspace = internalMutation({
       slug: `${slug}-${args.slackTeamId.slice(-4)}`,
       slackTeamId: args.slackTeamId,
       slackTeamName: args.slackTeamName,
+      slackBotToken: args.slackBotToken,
       slackBotUserId: args.slackBotUserId,
       settings: {
         aiExtractionEnabled: true,
@@ -382,8 +389,20 @@ export const handleAppMention = internalAction({
 
     // Get channel mapping for repository context
     const channelMapping = await ctx.runQuery(internal.slack.getChannelMapping, {
+      workspaceId: workspace._id,
       slackChannelId: args.channelId,
     });
+
+    // Fetch repository details if channel has a linked repository
+    let linkedRepository: { name: string; fullName: string } | null = null;
+    if (channelMapping?.repositoryId) {
+      const repo = await ctx.runQuery(internal.github.getRepository, {
+        repositoryId: channelMapping.repositoryId,
+      });
+      if (repo) {
+        linkedRepository = { name: repo.name, fullName: repo.fullName };
+      }
+    }
 
     // Clean message text (remove bot mention but keep user mentions for assignment)
     const cleanText = args.text
@@ -392,6 +411,7 @@ export const handleAppMention = internalAction({
 
     if (!cleanText) {
       await sendSlackMessage({
+        token: workspace.slackBotToken ?? "",
         channelId: args.channelId,
         threadTs: args.threadTs,
         text: "How can I help? Try:\n• `@norbot summarize` - See task summary\n• `@norbot mark FIX-123 as done` - Update status\n• `@norbot assign FIX-123 to @user` - Assign task\n• Or describe a bug/task to create one",
@@ -411,6 +431,7 @@ export const handleAppMention = internalAction({
     if (args.files && args.files.length > 0) {
       try {
         attachments = await ctx.runAction(internal.slack.downloadSlackFiles, {
+          workspaceId: workspace._id,
           files: args.files,
         });
         console.log(`Downloaded ${attachments.length} files from Slack`);
@@ -428,6 +449,7 @@ export const handleAppMention = internalAction({
 
       if (!usageCheck.allowed) {
         await sendSlackMessage({
+          token: workspace.slackBotToken ?? "",
           channelId: args.channelId,
           threadTs: args.threadTs,
           text: "Your workspace has reached its monthly AI usage limit. Please upgrade your plan or wait for the limit to reset.",
@@ -443,6 +465,11 @@ export const handleAppMention = internalAction({
           ? `\n- attachments: ${JSON.stringify(attachments)}`
           : "";
 
+      // Build repository context for the agent
+      const repoInfo = linkedRepository
+        ? `\n- linkedRepository: ${linkedRepository.fullName} (Tasks from this channel are associated with this GitHub repository)`
+        : "";
+
       // Build context for the agent with all required parameters for tools
       const contextInfo = `Context (use these values when calling tools):
 - workspaceId: ${workspace._id}
@@ -450,7 +477,7 @@ export const handleAppMention = internalAction({
 - slackUserId: ${args.userId}
 - slackMessageTs: ${args.ts}
 - slackThreadTs: ${args.threadTs}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}${attachmentsInfo}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${repoInfo}${attachmentsInfo}
 
 User message: ${cleanText}
 
@@ -474,6 +501,7 @@ Original text for task creation: ${cleanText}`;
         "I didn't quite understand that. Could you provide more details?\n• What were you trying to do?\n• What happened instead?\n• Any error messages?";
 
       await sendSlackMessage({
+        token: workspace.slackBotToken ?? "",
         channelId: args.channelId,
         threadTs: args.threadTs,
         text: responseText,
@@ -481,6 +509,7 @@ Original text for task creation: ${cleanText}`;
     } catch (error) {
       console.error("Agent error:", error);
       await sendSlackMessage({
+        token: workspace.slackBotToken ?? "",
         channelId: args.channelId,
         threadTs: args.threadTs,
         text: "Sorry, I encountered an error processing your request. Please try again.",
@@ -550,6 +579,13 @@ export const postPRUpdate = internalAction({
       return;
     }
 
+    // Get workspace to retrieve the bot token
+    const workspace = await ctx.runQuery(api.workspaces.getById, { id: task.workspaceId });
+    if (!workspace?.slackBotToken) {
+      console.error("No Slack bot token for workspace:", task.workspaceId);
+      return;
+    }
+
     let message: string;
     if (args.action === "opened") {
       message = `🎉 *Claude opened PR #${args.prNumber}*: ${args.prTitle}\n→ ${args.prUrl}`;
@@ -558,6 +594,7 @@ export const postPRUpdate = internalAction({
     }
 
     await sendSlackMessage({
+      token: workspace.slackBotToken,
       channelId: task.source.slackChannelId,
       threadTs: task.source.slackThreadTs,
       text: message,
@@ -587,14 +624,15 @@ function markdownToSlackMrkdwn(text: string): string {
 }
 
 async function sendSlackMessage(params: {
+  token: string;
   channelId: string;
   threadTs?: string;
   text: string;
   blocks?: unknown[];
 }) {
-  const token = process.env.SLACK_BOT_TOKEN;
+  const { token } = params;
   if (!token) {
-    console.error("SLACK_BOT_TOKEN not configured");
+    console.error("Slack bot token not provided");
     return;
   }
 
@@ -626,9 +664,10 @@ async function sendSlackMessage(params: {
 export const listBotChannels = internalAction({
   args: { workspaceId: v.id("workspaces") },
   handler: async (ctx, args): Promise<SlackChannel[]> => {
-    const token = process.env.SLACK_BOT_TOKEN;
-    if (!token) {
-      throw new Error("SLACK_BOT_TOKEN not configured");
+    // Get workspace to retrieve the bot token
+    const workspace = await ctx.runQuery(api.workspaces.getById, { id: args.workspaceId });
+    if (!workspace?.slackBotToken) {
+      throw new Error("No Slack bot token configured for this workspace");
     }
 
     // Fetch all channels (public and private that bot has access to)
@@ -636,7 +675,46 @@ export const listBotChannels = internalAction({
       "https://slack.com/api/conversations.list?types=public_channel,private_channel&limit=200",
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${workspace.slackBotToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+    if (!data.ok) {
+      throw new Error(`Slack API error: ${data.error}`);
+    }
+
+    // Filter to channels where bot is a member
+    return data.channels
+      .filter((ch: SlackApiChannel) => ch.is_member)
+      .map((ch: SlackApiChannel) => ({
+        id: ch.id,
+        name: ch.name,
+        isPrivate: ch.is_private,
+        numMembers: ch.num_members,
+        topic: ch.topic?.value || "",
+      }));
+  },
+});
+
+// Public action to fetch available Slack channels for the UI
+export const getAvailableChannels = action({
+  args: { workspaceId: v.id("workspaces") },
+  handler: async (ctx, args): Promise<SlackChannel[]> => {
+    // Verify workspace exists and has bot token
+    const workspace = await ctx.runQuery(api.workspaces.getById, { id: args.workspaceId });
+    if (!workspace?.slackBotToken) {
+      throw new Error("No Slack bot token configured for this workspace");
+    }
+
+    // Fetch channels from Slack API using workspace-specific token
+    const response = await fetch(
+      "https://slack.com/api/conversations.list?types=public_channel,private_channel&limit=200",
+      {
+        headers: {
+          Authorization: `Bearer ${workspace.slackBotToken}`,
           "Content-Type": "application/json",
         },
       }
@@ -729,17 +807,13 @@ export const downloadSlackFile = internalAction({
     url: v.string(),
     filename: v.string(),
     mimeType: v.string(),
+    slackBotToken: v.string(), // Workspace-specific token
   },
   handler: async (ctx, args) => {
-    const token = process.env.SLACK_BOT_TOKEN;
-    if (!token) {
-      throw new Error("SLACK_BOT_TOKEN not configured");
-    }
-
     // Download file from Slack (requires Bearer token)
     const response = await fetch(args.url, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${args.slackBotToken}`,
       },
     });
 
@@ -758,6 +832,7 @@ export const downloadSlackFile = internalAction({
 
 export const downloadSlackFiles = internalAction({
   args: {
+    workspaceId: v.id("workspaces"),
     files: v.array(
       v.object({
         id: v.string(),
@@ -769,6 +844,12 @@ export const downloadSlackFiles = internalAction({
     ),
   },
   handler: async (ctx, args) => {
+    // Get workspace token for downloading files
+    const workspace = await ctx.runQuery(api.workspaces.getById, { id: args.workspaceId });
+    if (!workspace?.slackBotToken) {
+      throw new Error("No Slack bot token configured for this workspace");
+    }
+
     const results: Array<{
       storageId: string;
       filename: string;
@@ -783,6 +864,7 @@ export const downloadSlackFiles = internalAction({
           url: file.url_private,
           filename: file.name,
           mimeType: file.mimetype,
+          slackBotToken: workspace.slackBotToken,
         });
 
         results.push({

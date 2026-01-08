@@ -255,3 +255,20 @@ export const completeOnboarding = mutation({
     });
   },
 });
+
+export const resetOnboarding = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(args.userId, {
+      onboarding: {
+        completedAt: undefined,
+        skippedSteps: [],
+        currentStep: "github",
+      },
+      updatedAt: Date.now(),
+    });
+  },
+});

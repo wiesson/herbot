@@ -84,8 +84,9 @@ export const summarizeTasksTool = createTool({
     slackChannelId: z.string().describe("The Slack channel ID to get tasks for"),
   }),
   handler: async (ctx, args): Promise<TaskSummaryResult> => {
-    // Get channel mapping to find repository
+    // Get channel mapping to find repository (with workspace isolation)
     const channelMapping = await ctx.runQuery(internal.tools.getChannelMappingById, {
+      workspaceId: args.workspaceId as Id<"workspaces">,
       slackChannelId: args.slackChannelId,
     });
 

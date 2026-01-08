@@ -13,6 +13,7 @@ export default defineSchema({
     // Slack Integration
     slackTeamId: v.string(),
     slackTeamName: v.string(),
+    slackBotToken: v.optional(v.string()), // Per-workspace bot token for multi-tenant isolation
     slackBotUserId: v.optional(v.string()),
 
     // Settings
