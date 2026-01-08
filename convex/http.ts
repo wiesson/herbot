@@ -135,7 +135,8 @@ http.route({
       });
 
       // Redirect to setup wizard
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      // APP_URL must be set in Convex Dashboard (e.g., https://norbot.vercel.app)
+      const appUrl = process.env.APP_URL || "http://localhost:3000";
       return Response.redirect(`${appUrl}/setup?step=channels&slack=connected`, 302);
     } catch (error) {
       console.error("Slack OAuth error:", error);
