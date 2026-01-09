@@ -581,6 +581,15 @@ Original text for task creation: ${cleanText}`;
         threadTs: args.threadTs,
         text: responseText,
       });
+
+      // Save conversation for thread continuity (so we can respond to follow-ups)
+      await ctx.runMutation(internal.slack.upsertAgentConversation, {
+        workspaceId: workspace._id,
+        slackChannelId: args.channelId,
+        slackThreadTs: args.threadTs,
+        agentThreadId: threadId,
+        status: "active",
+      });
     } catch (error) {
       console.error("Agent error:", error);
       await sendSlackMessage({
@@ -612,7 +621,95 @@ export const handleThreadReply = internalAction({
 
     if (!workspace) return;
 
-    // Find task by thread
+    // Check for active agent conversation first
+    const conversation = await ctx.runQuery(internal.slack.getAgentConversation, {
+      workspaceId: workspace._id,
+      slackChannelId: args.channelId,
+      slackThreadTs: args.threadTs,
+    });
+
+    if (conversation && conversation.status === "active") {
+      // Continue the agent conversation
+      try {
+        // Check AI usage limits
+        const usageCheck = await ctx.runQuery(internal.ai.checkUsageInternal, {
+          workspaceId: workspace._id,
+        });
+
+        if (!usageCheck.allowed) {
+          await sendSlackMessage({
+            token: workspace.slackBotToken ?? "",
+            channelId: args.channelId,
+            threadTs: args.threadTs,
+            text: "Your workspace has reached its monthly AI usage limit.",
+          });
+          return;
+        }
+
+        // Get channel mapping for context
+        const channelMapping = await ctx.runQuery(
+          internal.slack.getChannelMapping,
+          { workspaceId: workspace._id, slackChannelId: args.channelId }
+        );
+
+        // Build context for follow-up
+        const contextInfo = `Context (use these values when calling tools):
+- workspaceId: ${workspace._id}
+- slackChannelId: ${args.channelId}
+- slackUserId: ${args.userId}
+- slackMessageTs: ${args.ts}
+- slackThreadTs: ${args.threadTs}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}
+
+User follow-up message: ${args.text}`;
+
+        // Continue on the existing agent thread
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = await norbotAgent.generateText(
+          ctx,
+          { threadId: conversation.agentThreadId },
+          {
+            messages: [{ role: "user" as const, content: contextInfo }],
+            maxSteps: 5,
+          } as any
+        );
+
+        // Increment AI usage
+        await ctx.runMutation(internal.ai.incrementUsageInternal, {
+          workspaceId: workspace._id,
+        });
+
+        const responseText =
+          result.text || "I'm not sure how to help with that. Could you clarify?";
+
+        await sendSlackMessage({
+          token: workspace.slackBotToken ?? "",
+          channelId: args.channelId,
+          threadTs: args.threadTs,
+          text: responseText,
+        });
+
+        // Update conversation timestamp
+        await ctx.runMutation(internal.slack.upsertAgentConversation, {
+          workspaceId: workspace._id,
+          slackChannelId: args.channelId,
+          slackThreadTs: args.threadTs,
+          agentThreadId: conversation.agentThreadId,
+          status: "active",
+        });
+      } catch (error) {
+        console.error("Error continuing conversation:", error);
+        await sendSlackMessage({
+          token: workspace.slackBotToken ?? "",
+          channelId: args.channelId,
+          threadTs: args.threadTs,
+          text: "Sorry, I encountered an error. Please try again or @mention me directly.",
+        });
+      }
+      return;
+    }
+
+    // Fall back to existing behavior: add message to task if one exists
     const task = await ctx.runQuery(internal.slack.getTaskBySlackThread, {
       workspaceId: workspace._id,
       slackChannelId: args.channelId,
@@ -1183,6 +1280,303 @@ export const downloadSlackFiles = internalAction({
     }
 
     return results;
+  },
+});
+
+// ===========================================
+// AGENT CONVERSATIONS (for thread continuity)
+// ===========================================
+
+export const getAgentConversation = internalQuery({
+  args: {
+    workspaceId: v.id("workspaces"),
+    slackChannelId: v.string(),
+    slackThreadTs: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("agentConversations")
+      .withIndex("by_thread", (q) =>
+        q
+          .eq("workspaceId", args.workspaceId)
+          .eq("slackChannelId", args.slackChannelId)
+          .eq("slackThreadTs", args.slackThreadTs)
+      )
+      .first();
+  },
+});
+
+export const upsertAgentConversation = internalMutation({
+  args: {
+    workspaceId: v.id("workspaces"),
+    slackChannelId: v.string(),
+    slackThreadTs: v.string(),
+    agentThreadId: v.string(),
+    status: v.union(v.literal("active"), v.literal("completed")),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Check if conversation exists
+    const existing = await ctx.db
+      .query("agentConversations")
+      .withIndex("by_thread", (q) =>
+        q
+          .eq("workspaceId", args.workspaceId)
+          .eq("slackChannelId", args.slackChannelId)
+          .eq("slackThreadTs", args.slackThreadTs)
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        agentThreadId: args.agentThreadId,
+        status: args.status,
+        updatedAt: now,
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("agentConversations", {
+      workspaceId: args.workspaceId,
+      slackChannelId: args.slackChannelId,
+      slackThreadTs: args.slackThreadTs,
+      agentThreadId: args.agentThreadId,
+      status: args.status,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+// ===========================================
+// SLACK ASSISTANTS API
+// ===========================================
+
+export const handleAssistantThreadStarted = internalAction({
+  args: {
+    teamId: v.string(),
+    channelId: v.string(),
+    threadTs: v.string(),
+    userId: v.string(),
+    context: v.optional(
+      v.object({
+        channel_id: v.optional(v.string()),
+        team_id: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.runQuery(internal.slack.getWorkspaceBySlackTeam, {
+      slackTeamId: args.teamId,
+    });
+
+    if (!workspace) {
+      console.error("No workspace found for Slack team:", args.teamId);
+      return;
+    }
+
+    // Set suggested prompts for the assistant
+    const response = await fetch(
+      "https://slack.com/api/assistant.threads.setSuggestedPrompts",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${workspace.slackBotToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          channel_id: args.channelId,
+          thread_ts: args.threadTs,
+          prompts: [
+            { title: "My tasks", message: "Show my current tasks" },
+            { title: "Create task", message: "I need to create a new task" },
+            {
+              title: "Extract tasks",
+              message: "Extract tasks from recent channel messages",
+            },
+            { title: "Task status", message: "What's the status of my tasks?" },
+          ],
+        }),
+      }
+    );
+
+    const data = await response.json();
+    if (!data.ok) {
+      console.error("Failed to set suggested prompts:", data.error);
+    }
+  },
+});
+
+export const handleAssistantContextChanged = internalAction({
+  args: {
+    teamId: v.string(),
+    channelId: v.string(),
+    threadTs: v.string(),
+    userId: v.string(),
+    context: v.optional(
+      v.object({
+        channel_id: v.optional(v.string()),
+        team_id: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.runQuery(internal.slack.getWorkspaceBySlackTeam, {
+      slackTeamId: args.teamId,
+    });
+
+    if (!workspace) {
+      console.error("No workspace found for Slack team:", args.teamId);
+      return;
+    }
+
+    // Update prompts based on the new channel context
+    const contextChannelId = args.context?.channel_id;
+
+    // Get channel name if we have a context channel
+    let channelName = "";
+    if (contextChannelId && workspace.slackBotToken) {
+      const channelInfo = await fetchChannelInfo(
+        workspace.slackBotToken,
+        contextChannelId
+      );
+      if (channelInfo) {
+        channelName = channelInfo.name;
+      }
+    }
+
+    const prompts = contextChannelId
+      ? [
+          {
+            title: "Extract tasks here",
+            message: `Extract tasks from #${channelName || contextChannelId}`,
+          },
+          { title: "My tasks", message: "Show my current tasks" },
+          {
+            title: "Create task",
+            message: `Create a new task for #${channelName || contextChannelId}`,
+          },
+          {
+            title: "Channel backlog",
+            message: `Show tasks from #${channelName || contextChannelId}`,
+          },
+        ]
+      : [
+          { title: "My tasks", message: "Show my current tasks" },
+          { title: "Create task", message: "I need to create a new task" },
+          { title: "All tasks", message: "Show all tasks in my workspace" },
+          { title: "Help", message: "What can you help me with?" },
+        ];
+
+    const response = await fetch(
+      "https://slack.com/api/assistant.threads.setSuggestedPrompts",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${workspace.slackBotToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          channel_id: args.channelId,
+          thread_ts: args.threadTs,
+          prompts,
+        }),
+      }
+    );
+
+    const data = await response.json();
+    if (!data.ok) {
+      console.error("Failed to update suggested prompts:", data.error);
+    }
+  },
+});
+
+export const handleAssistantMessage = internalAction({
+  args: {
+    teamId: v.string(),
+    channelId: v.string(),
+    userId: v.string(),
+    text: v.string(),
+    ts: v.string(),
+    threadTs: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const workspace = await ctx.runQuery(internal.slack.getWorkspaceBySlackTeam, {
+      slackTeamId: args.teamId,
+    });
+
+    if (!workspace) {
+      console.error("No workspace found for Slack team:", args.teamId);
+      return;
+    }
+
+    const threadTs = args.threadTs || args.ts;
+
+    // Set loading status
+    await fetch("https://slack.com/api/assistant.threads.setStatus", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${workspace.slackBotToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        channel_id: args.channelId,
+        thread_ts: threadTs,
+        status: "Thinking...",
+      }),
+    });
+
+    // Process the message - reuse existing task extraction logic
+    // For now, provide a simple response based on the message content
+    const lowerText = args.text.toLowerCase();
+    let responseText = "";
+
+    if (lowerText.includes("my tasks") || lowerText.includes("current tasks")) {
+      // TODO: Query user's tasks and format response
+      responseText =
+        "To see your tasks, visit the Norbot dashboard. I'm working on showing tasks directly here!";
+    } else if (lowerText.includes("create task") || lowerText.includes("new task")) {
+      responseText =
+        "To create a task, @mention me in a channel with your task description, and I'll extract and prioritize it automatically.";
+    } else if (lowerText.includes("extract tasks")) {
+      responseText =
+        "To extract tasks from channel discussions, go to a channel and @mention me with the messages you want analyzed.";
+    } else if (lowerText.includes("status")) {
+      responseText =
+        "Task status tracking is available on the Norbot dashboard. I'll add status updates here soon!";
+    } else if (lowerText.includes("help")) {
+      responseText = `Here's what I can help you with:
+
+• *Extract tasks* - @mention me in a channel to extract tasks from messages
+• *Create tasks* - Describe work that needs to be done
+• *Track progress* - Check the dashboard for task status
+• *Prioritize* - I automatically prioritize tasks based on urgency and impact
+
+Try @mentioning me in a channel to get started!`;
+    } else {
+      // Default - treat as potential task description
+      responseText = `I received your message. To create a task from this, @mention me in a channel where your team can see it.
+
+For task management, try:
+• "Show my tasks"
+• "Create a task"
+• "Help"`;
+    }
+
+    // Send the response (this clears the loading status)
+    await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${workspace.slackBotToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        channel: args.channelId,
+        thread_ts: threadTs,
+        text: responseText,
+      }),
+    });
   },
 });
 

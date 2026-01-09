@@ -19,6 +19,9 @@ features:
   bot_user:
     display_name: Norbot
     always_online: true
+  assistant_view:
+    assistant_description: "AI-powered task extraction and management"
+    suggested_prompts_enabled: true
 
 oauth_config:
   redirect_urls:
@@ -33,6 +36,8 @@ oauth_config:
       - groups:history
       - groups:read
       - users:read
+      - assistant:write
+      - im:history
 
 settings:
   event_subscriptions:
@@ -42,6 +47,9 @@ settings:
       - member_joined_channel
       - member_left_channel
       - message.channels
+      - assistant_thread_started
+      - assistant_thread_context_changed
+      - message.im
   interactivity:
     is_enabled: true
     request_url: https://YOUR_CONVEX_URL.convex.site/slack/interactivity

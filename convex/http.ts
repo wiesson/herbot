@@ -92,6 +92,40 @@ http.route({
           channelId: event.channel,
         });
       }
+
+      // Assistant thread started - user opened the assistant sidebar
+      if (event.type === "assistant_thread_started") {
+        await ctx.scheduler.runAfter(0, internal.slack.handleAssistantThreadStarted, {
+          teamId,
+          channelId: event.assistant_thread.channel_id,
+          threadTs: event.assistant_thread.thread_ts,
+          userId: event.assistant_thread.user_id,
+          context: event.assistant_thread.context,
+        });
+      }
+
+      // Assistant context changed - user switched channels while assistant is open
+      if (event.type === "assistant_thread_context_changed") {
+        await ctx.scheduler.runAfter(0, internal.slack.handleAssistantContextChanged, {
+          teamId,
+          channelId: event.assistant_thread.channel_id,
+          threadTs: event.assistant_thread.thread_ts,
+          userId: event.assistant_thread.user_id,
+          context: event.assistant_thread.context,
+        });
+      }
+
+      // Direct message in assistant thread
+      if (event.type === "message" && event.channel_type === "im" && !event.bot_id) {
+        await ctx.scheduler.runAfter(0, internal.slack.handleAssistantMessage, {
+          teamId,
+          channelId: event.channel,
+          userId: event.user,
+          text: event.text,
+          ts: event.ts,
+          threadTs: event.thread_ts,
+        });
+      }
     }
 
     // Return 200 immediately - processing happens async

@@ -478,4 +478,20 @@ export default defineSchema({
     eventType: v.string(), // "app_mention", "message", etc.
     processedAt: v.number(),
   }).index("by_event_ts", ["eventTs"]),
+
+  // ===========================================
+  // AGENT CONVERSATIONS (track active Slack threads)
+  // ===========================================
+
+  agentConversations: defineTable({
+    workspaceId: v.id("workspaces"),
+    slackChannelId: v.string(),
+    slackThreadTs: v.string(),
+    agentThreadId: v.string(), // Convex Agent framework thread ID
+    status: v.union(v.literal("active"), v.literal("completed")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_thread", ["workspaceId", "slackChannelId", "slackThreadTs"])
+    .index("by_status", ["workspaceId", "status"]),
 });
