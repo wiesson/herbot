@@ -2,11 +2,11 @@ import { redirect } from "next/navigation";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@convex/_generated/api";
 import { getSessionToken } from "@/lib/auth";
-import { Dashboard } from "@/components/dashboard";
+import { WaitingRoom } from "@/components/waiting-room";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
-export default async function Home() {
+export default async function WaitingPage() {
   const token = await getSessionToken();
 
   if (!token) {
@@ -19,15 +19,16 @@ export default async function Home() {
     redirect("/login");
   }
 
-  // Check if user has any workspaces - redirect to waiting room if not
+  // If user has workspaces, redirect to dashboard
   const hasWorkspaces = user.workspaces && user.workspaces.length > 0;
-  if (!hasWorkspaces) {
-    redirect("/waiting");
+  if (hasWorkspaces) {
+    redirect("/");
   }
 
-  if (!user.onboarding?.completedAt) {
+  // If user is approved but has no workspace, redirect to setup to create one
+  if (user.isApproved) {
     redirect("/setup");
   }
 
-  return <Dashboard user={user} />;
+  return <WaitingRoom user={user} />;
 }

@@ -15,6 +15,7 @@ import type * as channelMappings from "../channelMappings.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
 import type * as invitations from "../invitations.js";
+import type * as projects from "../projects.js";
 import type * as repositories from "../repositories.js";
 import type * as slack from "../slack.js";
 import type * as tasks from "../tasks.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   github: typeof github;
   http: typeof http;
   invitations: typeof invitations;
+  projects: typeof projects;
   repositories: typeof repositories;
   slack: typeof slack;
   tasks: typeof tasks;

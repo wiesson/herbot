@@ -5,7 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { LogOut, Plus, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 
 interface Workspace {
@@ -78,7 +78,7 @@ export function Dashboard({ user }: DashboardProps) {
             Welcome back, {user.name}!
           </h2>
           <p className="text-muted-foreground">
-            Select a workspace or create a new one to get started.
+            Select a workspace to continue.
           </p>
         </div>
 
@@ -101,28 +101,14 @@ export function Dashboard({ user }: DashboardProps) {
                 </Card>
               </Link>
             ))}
-
-            {/* Create New Workspace */}
-            <Link href="/workspaces/new">
-              <Card className="hover:border-emerald-500 transition-colors cursor-pointer border-dashed">
-                <CardContent className="flex flex-col items-center justify-center h-full min-h-[140px] text-muted-foreground">
-                  <Plus className="h-8 w-8 mb-2" />
-                  <span className="text-sm font-medium">Create Workspace</span>
-                </CardContent>
-              </Card>
-            </Link>
           </div>
         ) : (
           <Card>
             <CardContent className="py-12 text-center">
-              <h3 className="text-lg font-semibold mb-2">No workspaces yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Create your first workspace to start managing tasks with Norbot.
+              <h3 className="text-lg font-semibold mb-2">No workspaces</h3>
+              <p className="text-muted-foreground">
+                You need to be invited to a workspace by an admin.
               </p>
-              <Link href="/workspaces/new" className={cn(buttonVariants())}>
-                <Plus className="size-4" />
-                Create Workspace
-              </Link>
             </CardContent>
           </Card>
         )}

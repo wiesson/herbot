@@ -23,6 +23,12 @@ export default async function SetupPage({ searchParams }: SetupPageProps) {
     redirect("/login");
   }
 
+  // Users need either existing workspaces OR approval to access setup
+  const hasWorkspaces = user.workspaces && user.workspaces.length > 0;
+  if (!hasWorkspaces && !user.isApproved) {
+    redirect("/waiting");
+  }
+
   const params = await searchParams;
 
   // If onboarding already complete and no step param, redirect to dashboard

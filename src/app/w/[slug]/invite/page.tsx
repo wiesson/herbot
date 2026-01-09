@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { ArrowLeft, UserPlus, Copy, Check, Clock, X, Github } from "lucide-react";
+import { ArrowLeft, UserPlus, Copy, Check, Clock, X, Github, Users } from "lucide-react";
 import type { Doc } from "@convex/_generated/dataModel";
 
 interface InvitePageProps {
@@ -54,6 +54,7 @@ export default function InvitePage({ params }: InvitePageProps) {
     api.invitations.getPendingForWorkspace,
     workspace ? { workspaceId: workspace._id } : "skip"
   );
+  const waitingUsers = useQuery(api.users.listUsersWithoutWorkspaces);
 
   // Mutations
   const createInvitation = useMutation(api.invitations.create);
@@ -156,6 +157,58 @@ export default function InvitePage({ params }: InvitePageProps) {
         </Link>
 
         <h1 className="text-2xl font-bold mb-6">Invite Members</h1>
+
+        {/* Waiting Users Section */}
+        {waitingUsers && waitingUsers.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-amber-500" />
+                Users Waiting for Access ({waitingUsers.length})
+              </CardTitle>
+              <CardDescription>
+                These users have signed up but don&apos;t have access to any workspace yet
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {waitingUsers.map((waitingUser) => (
+                  <div
+                    key={waitingUser._id}
+                    className="flex items-center justify-between p-3 rounded-lg border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={`https://github.com/${waitingUser.githubUsername}.png`}
+                          alt={waitingUser.githubUsername}
+                        />
+                        <AvatarFallback>
+                          {waitingUser.githubUsername[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{waitingUser.name}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Github className="h-3 w-3" />
+                          {waitingUser.githubUsername}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setGithubUsername(waitingUser.githubUsername)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Invite
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Invite Form */}
         <Card className="mb-6">

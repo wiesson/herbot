@@ -86,6 +86,34 @@ export const me = query({
   },
 });
 
+export const listUsersWithoutWorkspaces = query({
+  args: {},
+  handler: async (ctx) => {
+    const allUsers = await ctx.db.query("users").collect();
+
+    const usersWithoutWorkspaces = [];
+    for (const user of allUsers) {
+      const membership = await ctx.db
+        .query("workspaceMembers")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .first();
+
+      if (!membership) {
+        usersWithoutWorkspaces.push({
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          githubUsername: user.githubUsername,
+          createdAt: user.createdAt,
+        });
+      }
+    }
+
+    return usersWithoutWorkspaces;
+  },
+});
+
 // ===========================================
 // MUTATIONS
 // ===========================================
