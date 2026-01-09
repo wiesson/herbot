@@ -16,12 +16,14 @@ export const list = query({
       .filter((q) => q.eq(q.field("isActive"), true))
       .collect();
 
-    // Enrich with repository info
+    // Enrich with project and repository info
     const enriched = await Promise.all(
       mappings.map(async (mapping) => {
+        const project = mapping.projectId ? await ctx.db.get(mapping.projectId) : null;
         const repo = mapping.repositoryId ? await ctx.db.get(mapping.repositoryId) : null;
         return {
           ...mapping,
+          project: project ? { id: project._id, name: project.name, shortCode: project.shortCode } : null,
           repository: repo ? { name: repo.name, fullName: repo.fullName } : null,
         };
       })
@@ -50,6 +52,7 @@ export const create = mutation({
     workspaceId: v.id("workspaces"),
     slackChannelId: v.string(),
     slackChannelName: v.string(),
+    projectId: v.optional(v.id("projects")),
     repositoryId: v.optional(v.id("repositories")),
     settings: v.optional(
       v.object({
@@ -76,6 +79,7 @@ export const create = mutation({
       workspaceId: args.workspaceId,
       slackChannelId: args.slackChannelId,
       slackChannelName: args.slackChannelName,
+      projectId: args.projectId,
       repositoryId: args.repositoryId,
       settings: args.settings ?? {
         autoExtractTasks: true,
@@ -91,6 +95,7 @@ export const create = mutation({
 export const update = mutation({
   args: {
     id: v.id("channelMappings"),
+    projectId: v.optional(v.id("projects")),
     repositoryId: v.optional(v.id("repositories")),
     settings: v.optional(
       v.object({
@@ -105,6 +110,7 @@ export const update = mutation({
     if (!mapping) throw new Error("Channel mapping not found");
 
     await ctx.db.patch(args.id, {
+      ...(args.projectId !== undefined ? { projectId: args.projectId } : {}),
       ...(args.repositoryId !== undefined ? { repositoryId: args.repositoryId } : {}),
       ...(args.settings ? { settings: args.settings } : {}),
       updatedAt: Date.now(),

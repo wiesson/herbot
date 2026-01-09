@@ -6,11 +6,65 @@ AI-powered task management from Slack. Mention @Norbot in any channel to automat
 
 ## Features
 
-- **Slack Integration**: @mention Norbot to create tasks from any message
-- **AI Task Extraction**: Automatically extracts title, priority, type, and code context
-- **Kanban Dashboard**: Visual task board with drag-and-drop (coming soon)
-- **Multi-Workspace**: Support multiple Slack teams with separate repos
-- **Claude Code Ready**: Tasks include code context for automated fixes
+- **Slack Bot**: @mention Norbot to create tasks, update status, assign, and summarize
+- **Projects**: Organize tasks with short codes (TM-123), keywords for auto-detection
+- **Channel Mappings**: Link Slack channels to GitHub repos and projects
+- **AI Task Extraction**: Extracts title, priority, type, and asks clarifying questions
+- **GitHub Integration**: Create issues with @claude mention, link repos to projects
+- **Kanban Dashboard**: Visual task board organized by status
+- **Team Management**: Invite members, assign roles (admin/member/viewer)
+- **Thread Context**: Bot understands full thread history when mentioned in replies
+- **File Attachments**: Screenshots and files from Slack attached to tasks
+- **AI Usage Limits**: Per-workspace monthly limits
+
+## How It Works
+
+### Current
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. AGENTIC INTAKE                                           │
+│    User: "@norbot there's a bug"                            │
+│    Bot: "What's happening? Screenshot?"                     │
+│    User: [image] [more text]                                │
+│    Bot: "Got it. Which project?" → collects into structure  │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 2. TASK CREATED                                             │
+│    Structured: title, description, images, code context     │
+│    Assigned to project, tagged, prioritized                 │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 3. GITHUB ISSUE (optional)                                  │
+│    Creates GitHub issue with full context                   │
+│    Includes @claude mention for AI coding agents            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Coming Soon
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 4. TRIGGER AI CODER                                         │
+│    Automatically triggers Claude Code / Cursor / etc.       │
+│    AI starts working on the fix                             │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 5. VERIFICATION / HANDOVER                                  │
+│    AI verifies: "I can reproduce this"                      │
+│    AI prepares: "Here's what I found, files involved"       │
+│    Best case: "Here's the fix"                              │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 6. PR                                                       │
+│    Vercel/Netlify: just merge and done                      │
+│    Complex: handover to human with full context             │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Tech Stack
 
@@ -80,35 +134,39 @@ Open [http://localhost:3000](http://localhost:3000)
 ## Usage
 
 1. **Login** with GitHub
-2. **Create a workspace** (connects to your Slack team)
-3. **Invite Norbot** to a channel: `/invite @Norbot`
-4. **Create tasks**: `@Norbot The login button is broken on mobile`
-
-Norbot will:
-
-- Extract task details using AI
-- Create a task in your Kanban board
-- Reply in Slack with the task ID and link
+2. **Create workspace** or accept an invite
+3. **Setup wizard**: Connect Slack app, link GitHub repos, map channels
+4. **Configure**: Set up projects with short codes and keywords
+5. **Use Norbot** in Slack:
+   - `@Norbot The login button is broken on mobile` → creates task
+   - `@Norbot summarize` → shows task overview
+   - `@Norbot mark TM-123 as done` → updates status
+   - `@Norbot assign TM-123 to @user` → assigns task
+   - `@Norbot send TM-123 to github` → creates GitHub issue
 
 ## Project Structure
 
 ```
 ├── src/
-│   ├── app/                 # Next.js pages
-│   │   ├── w/[slug]/       # Workspace Kanban view
-│   │   └── login/          # GitHub OAuth login
+│   ├── app/                    # Next.js pages
+│   │   ├── w/[slug]/          # Workspace dashboard + settings
+│   │   ├── invite/[token]/    # Invitation acceptance
+│   │   └── login/             # GitHub OAuth
 │   ├── components/
-│   │   ├── kanban/         # Kanban board components
-│   │   └── ui/             # shadcn/ui components
-│   └── hooks/              # React hooks (useAuth, etc.)
+│   │   ├── kanban/            # Kanban board
+│   │   └── ui/                # UI components
+│   └── hooks/                 # React hooks
 ├── convex/
-│   ├── schema.ts           # Database schema
-│   ├── http.ts             # Slack webhook endpoints
-│   ├── slack.ts            # Slack event handlers
-│   ├── ai.ts               # AI task extraction
-│   ├── agents/             # Convex Agents
-│   └── *.ts                # Queries & mutations
-└── slack-app-manifest.yaml # One-click Slack app setup
+│   ├── agents/                # Norbot agent + tools
+│   │   ├── taskExtractor.ts   # Agent definition
+│   │   └── tools.ts           # Agent capabilities
+│   ├── schema.ts              # Database schema
+│   ├── slack.ts               # Slack event handlers
+│   ├── projects.ts            # Projects management
+│   ├── channelMappings.ts     # Channel-repo-project links
+│   ├── github.ts              # GitHub integration
+│   └── http.ts                # Webhook endpoints
+└── slack-app-manifest.yaml    # Slack app setup
 ```
 
 ## License

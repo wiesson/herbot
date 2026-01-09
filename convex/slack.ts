@@ -420,7 +420,7 @@ export const handleAppMention = internalAction({
       return;
     }
 
-    // Get channel mapping for repository context
+    // Get channel mapping for repository/project context
     const channelMapping = await ctx.runQuery(internal.slack.getChannelMapping, {
       workspaceId: workspace._id,
       slackChannelId: args.channelId,
@@ -434,6 +434,20 @@ export const handleAppMention = internalAction({
       });
       if (repo) {
         linkedRepository = { name: repo.name, fullName: repo.fullName };
+      }
+    }
+
+    // Get workspace projects for bot context
+    const workspaceProjects = await ctx.runQuery(internal.projects.getWorkspaceContext, {
+      workspaceId: workspace._id,
+    });
+
+    // Get channel's default project if set
+    let channelDefaultProject: { name: string; shortCode: string } | null = null;
+    if (channelMapping?.projectId) {
+      const project = workspaceProjects.find(p => p.id === channelMapping.projectId);
+      if (project) {
+        channelDefaultProject = { name: project.name, shortCode: project.shortCode };
       }
     }
 
@@ -473,6 +487,23 @@ export const handleAppMention = internalAction({
       }
     }
 
+    // Fetch thread context if we're replying in a thread
+    let threadContext = "";
+    if (args.threadTs !== args.ts) {
+      // We're in a thread - fetch previous messages for context
+      const threadMessages = await fetchThreadReplies(
+        workspace.slackBotToken ?? "",
+        args.channelId,
+        args.threadTs
+      );
+      threadContext = formatThreadForContext(threadMessages, args.ts);
+      if (threadContext) {
+        console.log(
+          `Fetched ${threadMessages.length} thread messages for context`
+        );
+      }
+    }
+
     // Use the norbot agent to handle everything
     try {
       // Check AI usage limits
@@ -503,6 +534,17 @@ export const handleAppMention = internalAction({
         ? `\n- linkedRepository: ${linkedRepository.fullName} (Tasks from this channel are associated with this GitHub repository)`
         : "";
 
+      // Build project context for the agent
+      const projectsInfo = workspaceProjects.length > 0
+        ? `\n\nAvailable projects:\n${workspaceProjects.map(p =>
+            `- ${p.name} (${p.shortCode}): keywords [${p.keywords.join(", ")}]${p.repos.length > 0 ? `, repos: ${p.repos.join(", ")}` : ""}`
+          ).join("\n")}`
+        : "\n\nNo projects configured yet. Tasks will use generic FIX-xxx IDs.";
+
+      const channelProjectInfo = channelDefaultProject
+        ? `\n- channelDefaultProject: ${channelDefaultProject.name} (${channelDefaultProject.shortCode}) - Use this project for tasks from this channel`
+        : "\n- channelDefaultProject: none - Use keyword matching or ask which project";
+
       // Build context for the agent with all required parameters for tools
       const contextInfo = `Context (use these values when calling tools):
 - workspaceId: ${workspace._id}
@@ -510,7 +552,7 @@ export const handleAppMention = internalAction({
 - slackUserId: ${args.userId}
 - slackMessageTs: ${args.ts}
 - slackThreadTs: ${args.threadTs}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}${repoInfo}${attachmentsInfo}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${attachmentsInfo}${projectsInfo}${threadContext}
 
 User message: ${cleanText}
 
@@ -689,6 +731,68 @@ async function sendSlackMessage(params: {
     console.error("Slack API error:", data.error);
   }
   return data;
+}
+
+// Fetch all replies in a thread from Slack
+interface SlackThreadMessage {
+  ts: string;
+  user: string;
+  text: string;
+  bot_id?: string;
+}
+
+async function fetchThreadReplies(
+  token: string,
+  channelId: string,
+  threadTs: string
+): Promise<SlackThreadMessage[]> {
+  if (!token) {
+    console.error("Slack bot token not provided for thread fetch");
+    return [];
+  }
+
+  const response = await fetch(
+    `https://slack.com/api/conversations.replies?channel=${channelId}&ts=${threadTs}&limit=50`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const data = await response.json();
+  if (!data.ok) {
+    console.error("Slack API error fetching thread:", data.error);
+    return [];
+  }
+
+  return data.messages || [];
+}
+
+// Format thread messages as context for the agent
+function formatThreadForContext(
+  messages: SlackThreadMessage[],
+  currentTs: string
+): string {
+  // Filter out the current message and bot messages, take last 15
+  const relevantMessages = messages
+    .filter((m) => m.ts !== currentTs && !m.bot_id)
+    .slice(-15);
+
+  if (relevantMessages.length === 0) {
+    return "";
+  }
+
+  const formatted = relevantMessages
+    .map((m) => `<@${m.user}>: ${m.text}`)
+    .join("\n");
+
+  // Cap at ~2000 chars to avoid token bloat
+  const truncated =
+    formatted.length > 2000 ? formatted.slice(-2000) + "\n[...truncated]" : formatted;
+
+  return `\n\nThread context (previous messages in this thread):\n${truncated}`;
 }
 
 // ===========================================
