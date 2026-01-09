@@ -52,11 +52,23 @@ export const getKanban = query({
   args: {
     workspaceId: v.id("workspaces"),
     repositoryId: v.optional(v.id("repositories")),
+    projectId: v.optional(v.id("projects")),
   },
   handler: async (ctx, args) => {
     let tasks;
 
-    if (args.repositoryId) {
+    // Use the most specific index available
+    if (args.projectId) {
+      tasks = await ctx.db
+        .query("tasks")
+        .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
+        .filter((q) => q.neq(q.field("status"), "cancelled"))
+        .collect();
+      // Further filter by repo if specified
+      if (args.repositoryId) {
+        tasks = tasks.filter((t) => t.repositoryId === args.repositoryId);
+      }
+    } else if (args.repositoryId) {
       tasks = await ctx.db
         .query("tasks")
         .withIndex("by_repository", (q) => q.eq("repositoryId", args.repositoryId))
@@ -70,24 +82,36 @@ export const getKanban = query({
         .collect();
     }
 
+    // Enrich tasks with project shortCode
+    const enrichedTasks = await Promise.all(
+      tasks.map(async (task) => {
+        let projectShortCode: string | undefined;
+        if (task.projectId) {
+          const project = await ctx.db.get(task.projectId);
+          projectShortCode = project?.shortCode;
+        }
+        return { ...task, projectShortCode };
+      })
+    );
+
     // Group by status
     const columns = {
-      backlog: tasks.filter((t) => t.status === "backlog"),
-      todo: tasks.filter((t) => t.status === "todo"),
-      in_progress: tasks.filter((t) => t.status === "in_progress"),
-      in_review: tasks.filter((t) => t.status === "in_review"),
-      done: tasks.filter((t) => t.status === "done"),
+      backlog: enrichedTasks.filter((t) => t.status === "backlog"),
+      todo: enrichedTasks.filter((t) => t.status === "todo"),
+      in_progress: enrichedTasks.filter((t) => t.status === "in_progress"),
+      in_review: enrichedTasks.filter((t) => t.status === "in_review"),
+      done: enrichedTasks.filter((t) => t.status === "done"),
     };
 
     return {
       columns,
       stats: {
-        total: tasks.length,
+        total: enrichedTasks.length,
         byPriority: {
-          critical: tasks.filter((t) => t.priority === "critical").length,
-          high: tasks.filter((t) => t.priority === "high").length,
-          medium: tasks.filter((t) => t.priority === "medium").length,
-          low: tasks.filter((t) => t.priority === "low").length,
+          critical: enrichedTasks.filter((t) => t.priority === "critical").length,
+          high: enrichedTasks.filter((t) => t.priority === "high").length,
+          medium: enrichedTasks.filter((t) => t.priority === "medium").length,
+          low: enrichedTasks.filter((t) => t.priority === "low").length,
         },
       },
     };

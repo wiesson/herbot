@@ -1,14 +1,14 @@
 "use client";
 
-import { use } from "react";
+import { use, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -30,13 +30,38 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   const { slug } = use(params);
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [selectedRepoId, setSelectedRepoId] = useState<string>("all");
+  const searchParams = useSearchParams();
+
+  // URL-based filters
+  const projectFilter = searchParams.get("project");
+  const repoFilter = searchParams.get("repo");
+
+  const updateFilter = useCallback(
+    (key: string, value: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+      const query = params.toString();
+      router.push(query ? `?${query}` : "?", { scroll: false });
+    },
+    [searchParams, router]
+  );
 
   const workspace = useQuery(api.workspaces.getBySlug, { slug });
   const repositories = useQuery(
     api.repositories.list,
     workspace ? { workspaceId: workspace._id } : "skip"
   );
+  const projects = useQuery(
+    api.projects.list,
+    workspace ? { workspaceId: workspace._id } : "skip"
+  );
+
+  // Find project ID from shortCode filter
+  const selectedProject = projects?.find((p) => p.shortCode === projectFilter);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -84,14 +109,37 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Project Filter Pills */}
+            {projects && projects.length > 0 && (
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  variant={!projectFilter ? "default" : "outline"}
+                  onClick={() => updateFilter("project", null)}
+                >
+                  All
+                </Button>
+                {projects.map((project) => (
+                  <Button
+                    key={project._id}
+                    size="sm"
+                    variant={
+                      projectFilter === project.shortCode ? "default" : "outline"
+                    }
+                    onClick={() => updateFilter("project", project.shortCode)}
+                  >
+                    {project.shortCode}
+                  </Button>
+                ))}
+              </div>
+            )}
+
             {/* Repository Filter */}
             {repositories && repositories.length > 0 && (
               <Select
-                value={selectedRepoId}
+                value={repoFilter ?? "all"}
                 onValueChange={(value) => {
-                  if (value) {
-                    setSelectedRepoId(value);
-                  }
+                  updateFilter("repo", value === "all" ? null : value);
                 }}
               >
                 <SelectTrigger className="w-[200px]">
@@ -139,11 +187,8 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <KanbanBoard
             workspaceId={workspace._id}
-            repositoryId={
-              selectedRepoId === "all"
-                ? undefined
-                : (selectedRepoId as Id<"repositories">)
-            }
+            repositoryId={repoFilter ? (repoFilter as Id<"repositories">) : undefined}
+            projectId={selectedProject?._id}
           />
         </div>
       </main>

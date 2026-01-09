@@ -10,6 +10,7 @@ import { TaskDetailModal } from "./task-detail-modal";
 interface KanbanBoardProps {
   workspaceId: Id<"workspaces">;
   repositoryId?: Id<"repositories">;
+  projectId?: Id<"projects">;
 }
 
 const columns = [
@@ -22,12 +23,13 @@ const columns = [
 
 type ColumnKey = (typeof columns)[number]["key"];
 
-export function KanbanBoard({ workspaceId, repositoryId }: KanbanBoardProps) {
+export function KanbanBoard({ workspaceId, repositoryId, projectId }: KanbanBoardProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<Id<"tasks"> | null>(null);
 
   const kanbanData = useQuery(api.tasks.getKanban, {
     workspaceId,
     repositoryId,
+    projectId,
   });
 
   const updateStatus = useMutation(api.tasks.updateStatus);

@@ -23,6 +23,7 @@ interface Task {
   priority: "critical" | "high" | "medium" | "low";
   taskType: "bug" | "feature" | "improvement" | "task" | "question";
   labels: string[];
+  projectShortCode?: string;
   source: {
     type: "slack" | "manual" | "github" | "api";
     slackChannelName?: string;
@@ -79,6 +80,11 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       <CardHeader className="p-3 pb-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-1.5">
+            {task.projectShortCode && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-semibold">
+                {task.projectShortCode}
+              </Badge>
+            )}
             <TypeIcon className={cn("size-4", taskTypeColors[task.taskType])} />
             <span className="text-xs font-mono text-muted-foreground">
               {task.displayId}
