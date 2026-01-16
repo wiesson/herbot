@@ -667,6 +667,39 @@ export const handleThreadReply = internalAction({
           { workspaceId: workspace._id, slackChannelId: args.channelId }
         );
 
+        // Fetch repository details if channel has a linked repository
+        let linkedRepository: { name: string; fullName: string } | null = null;
+        if (channelMapping?.repositoryId) {
+          const repo = await ctx.runQuery(internal.github.getRepository, {
+            repositoryId: channelMapping.repositoryId,
+          });
+          if (repo) {
+            linkedRepository = { name: repo.name, fullName: repo.fullName };
+          }
+        }
+
+        // Get workspace projects for bot context
+        const workspaceProjects = await ctx.runQuery(internal.projects.getWorkspaceContext, {
+          workspaceId: workspace._id,
+        });
+
+        // Get channel's default project if set
+        let channelDefaultProject: { name: string; shortCode: string } | null = null;
+        if (channelMapping?.projectId) {
+          const project = workspaceProjects.find(p => p.id === channelMapping.projectId);
+          if (project) {
+            channelDefaultProject = { name: project.name, shortCode: project.shortCode };
+          }
+        }
+
+        // Fetch thread context (including bot's own messages)
+        const threadMessages = await fetchThreadReplies(
+          workspace.slackBotToken ?? "",
+          args.channelId,
+          args.threadTs
+        );
+        const threadContext = formatThreadForContext(threadMessages, args.ts);
+
         // Build source context for the agent
         const sourceContext = {
           type: "slack",
@@ -678,10 +711,31 @@ export const handleThreadReply = internalAction({
           threadTs: args.threadTs,
         };
 
-        // Build context for follow-up
+        // Build repository context
+        const repoInfo = linkedRepository
+          ? `\n- linkedRepository: ${linkedRepository.fullName}`
+          : "";
+
+        // Build project context
+        const projectsInfo = workspaceProjects.length > 0
+          ? `\n\nAvailable projects:\n${workspaceProjects.map(p =>
+              `- ${p.name} (${p.shortCode}): keywords [${p.keywords.join(", ")}]${p.repos.length > 0 ? `, repos: ${p.repos.join(", ")}` : ""}`
+            ).join("\n")}`
+          : "";
+
+        let channelProjectInfo = "";
+        if (channelDefaultProject) {
+          const isStrict = channelMapping?.settings?.strictProjectMode;
+          const strictInstruction = isStrict
+            ? " - STRICT MODE: Use this project."
+            : " - Default project for this channel";
+          channelProjectInfo = `\n- channelDefaultProject: ${channelDefaultProject.name} (${channelDefaultProject.shortCode})${strictInstruction}`;
+        }
+
+        // Build context for follow-up with full context
         const contextInfo = `Context (use these values when calling tools):
 - source: ${JSON.stringify(sourceContext)}
-- channelName: ${channelMapping?.slackChannelName || "unknown"}
+- channelName: ${channelMapping?.slackChannelName || "unknown"}${channelProjectInfo}${repoInfo}${projectsInfo}${threadContext}
 
 User follow-up message: ${args.text}`;
 
@@ -894,17 +948,20 @@ function formatThreadForContext(
   messages: SlackThreadMessage[],
   currentTs: string
 ): string {
-  // Filter out the current message and bot messages, take last 15
+  // Filter out the current message, keep bot messages for conversation context
   const relevantMessages = messages
-    .filter((m) => m.ts !== currentTs && !m.bot_id)
+    .filter((m) => m.ts !== currentTs)
     .slice(-15);
 
   if (relevantMessages.length === 0) {
     return "";
   }
 
+  // Format messages, marking bot messages clearly so agent knows what it previously said
   const formatted = relevantMessages
-    .map((m) => `<@${m.user}>: ${m.text}`)
+    .map((m) => m.bot_id
+      ? `[Norbot]: ${m.text}`
+      : `<@${m.user}>: ${m.text}`)
     .join("\n");
 
   // Cap at ~2000 chars to avoid token bloat
